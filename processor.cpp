@@ -46,25 +46,25 @@ Processor::Processor(Tile *parent, MainWindow *mW, uint64_t numb):
 	statusWord[0] = true;
 	totalTicks = 1;
 	currentTLB = 0;
-    hardFaultCount = 0;
-    smallFaultCount = 0;
-    blocks = 0;
+	hardFaultCount = 0;
+	smallFaultCount = 0;
+    	blocks = 0;
         randomPage = 7;
 	inInterrupt = false;
-    processorNumber = numb;
-    clockDue = false;
-    QObject::connect(this, SIGNAL(hardFault()),
+    	processorNumber = numb;
+    	clockDue = false;
+    	QObject::connect(this, SIGNAL(hardFault()),
         	mW, SLOT(updateHardFaults()));
-    QObject::connect(this, SIGNAL(smallFault()),
+    	QObject::connect(this, SIGNAL(smallFault()),
         	mW, SLOT(updateSmallFaults()));
 }
 
 void Processor::resetCounters()
 {
-    hardFaultCount = 0;
-    smallFaultCount = 0;
-    blocks = 0;
-    serviceTime = 0;
+	hardFaultCount = 0;
+	smallFaultCount = 0;
+	blocks = 0;
+	serviceTime = 0;
 }
 
 void Processor::setMode()
