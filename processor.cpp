@@ -147,8 +147,8 @@ void Processor::markUpBasicPageEntries(const uint64_t& reqPTEPages,
 		masterTile->writeWord32(pageEntryBase + FLAGOFFSET, 0x07);
 	}
 	//stack
-    	uint stackFrame = (TILE_MEM_SIZE >> pageShift) - 1;
-	const uint64_t stackInTable = (2 << pageShift) + 
+    	uint64_t stackFrame = (TILE_MEM_SIZE >> pageShift) - 1;
+	uint64_t stackInTable = (2 << pageShift) + 
         	stackFrame * PAGETABLEENTRY + PAGETABLESLOCAL;
 	for (unsigned int i = 0; i < 2; i++) {	
     		masterTile->writeLong(stackInTable + VOFFSET,
@@ -176,7 +176,7 @@ void Processor::flushPagesEnd()
 void Processor::createMemoryMap(Memory *local, long pShift)
 {
 	localMemory = local;
-	pageShift = pShifti - 1; //512 bytes
+	pageShift = pShift - 1; //512 bytes
 	memoryAvailable = localMemory->getSize();
 	pagesAvailable = memoryAvailable >> pageShift;
 	uint64_t requiredPTESize = pagesAvailable * PAGETABLEENTRY;

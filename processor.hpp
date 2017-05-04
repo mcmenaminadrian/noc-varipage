@@ -77,56 +77,56 @@ private:
 	bool inClock;
 	bool clockDue;
 	void markUpBasicPageEntries(const uint64_t& reqPTEPages,
-	const uint64_t& reqBitmapPages);
+		const uint64_t& reqBitmapPages);
 	void writeOutBasicPageEntries(const uint64_t& reqPTEPages);
 	void writeOutPageAndBitmapLengths(const uint64_t& reqPTESize,
-	const uint64_t& reqBitmapPages);
+		const uint64_t& reqBitmapPages);
 	void zeroOutTLBs(const uint64_t& reqPTEPages);
 	uint64_t fetchAddressRead(const uint64_t& address,
         const bool& readOnly = false, const bool& write = false);
     	uint64_t fetchAddressWrite(const uint64_t& address);
 	bool isBitmapValid(const uint64_t& address,
-	const uint64_t& physAddress) const;
+		const uint64_t& physAddress) const;
 	uint64_t generateAddress(const uint64_t& frame,
 	const uint64_t& address) const;
     	uint64_t triggerSmallFault(
         const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
-        const uint64_t& address, const bool& write);
+        	const uint64_t& address, const bool& write);
 	void interruptBegin();
 	void interruptEnd();
 	void transferGlobalToLocal(const uint64_t& address,
 	const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
-    	const uint64_t& size, const bool& write);
+    		const uint64_t& size, const bool& write);
     	uint64_t triggerHardFault(const uint64_t& address, const bool& readOnly,
         	const bool& write);
 	const std::pair<const uint64_t, bool> getRandomFrame();
 	const std::pair<const uint64_t, bool> getFreeFrame();
 	void loadMemory(const uint64_t& frameNo,
-	const uint64_t& address);
+		const uint64_t& address);
 	void fixPageMap(const uint64_t& frameNo,
         const uint64_t& address, const bool& readOnly);
 	void fixPageMapStart(const uint64_t& frameNo,
-	const uint64_t& address);
+		const uint64_t& address);
 	void fixBitmap(const uint64_t& frameNo);
 	void markBitmapStart(const uint64_t& frameNo,
-	const uint64_t& address);
+		const uint64_t& address);
 	void markBitmapInit(const uint64_t& frameNo,
-        const uint64_t& address);
+        	const uint64_t& address);
 	void markBitmap(const uint64_t& frameNo,
-        const uint64_t& address);
+        	const uint64_t& address);
 	void fixTLB(const uint64_t& frameNo,
-	const uint64_t& address);
+		const uint64_t& address);
 	const std::vector<uint8_t>
 		requestRemoteMemory(
 		const uint64_t& size, const uint64_t& remoteAddress,
-        const uint64_t& localAddress, const bool& write);
+       		const uint64_t& localAddress, const bool& write);
     	const std::pair<uint64_t, uint8_t>
-        mapToGlobalAddress(const uint64_t& address);
-    void fetchAddressToRegister();
+        	mapToGlobalAddress(const uint64_t& address);
+    	void fetchAddressToRegister();
 	void activateClock();
 	//adjust numbers below to change how CLOCK fuctions
-    const uint8_t clockWipe = 1;
-    const uint16_t clockTicks = 1000;
+    	const uint8_t clockWipe = 1;
+    	const uint16_t clockTicks = 1000;
 	uint64_t totalTicks;
 	uint64_t currentTLB;
 
@@ -152,10 +152,10 @@ public:
 	uint64_t getLongAddress(const uint64_t& address);
 	void writeAddress(const uint64_t& addr,
 		const uint64_t& value);
-    void writeAddress64(const uint64_t& addr);
-    void writeAddress32(const uint64_t& addr);
-    void writeAddress16(const uint64_t& addr);
-    void writeAddress8(const uint64_t& addr);
+    	void writeAddress64(const uint64_t& addr);
+    	void writeAddress32(const uint64_t& addr);
+    	void writeAddress16(const uint64_t& addr);
+    	void writeAddress8(const uint64_t& addr);
 	void pushStackPointer();
 	void popStackPointer();
     	uint64_t getStackPointer() const;
@@ -187,9 +187,9 @@ public:
 	bool tryCheatLock() const;
 	void cheatUnlock() const;
         void resetCounters();
-    uint64_t hardFaultCount;
-    uint64_t smallFaultCount;
-    uint64_t blocks;
-    uint64_t serviceTime;
+    	uint64_t hardFaultCount;
+    	uint64_t smallFaultCount;
+    	uint64_t blocks;
+    	uint64_t serviceTime;
 };
 #endif
