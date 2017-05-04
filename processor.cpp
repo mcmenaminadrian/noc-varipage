@@ -25,6 +25,7 @@
 //bit 1 - 0 for moveable, 1 for fixed
 //bit 2 - 0 for CLOCKed out, 1 for CLOCKed in
 //bit 3 - 0 for read/write, 1 for read only
+//bit 4 - 0 for 512 byte page, 1 for 1024 byte
 
 //TLB model
 //first entry - virtual address 
@@ -176,13 +177,18 @@ void Processor::flushPagesEnd()
  *	more effectively
  */
 
+
+
+/* pageShift is 10 for 1024 byte pages */
 void Processor::createMemoryMap(Memory *local, long pShift)
 {
 	localMemory = local;
 	pageShift = pShift;
 	memoryAvailable = localMemory->getSize();
 	pagesAvailable = memoryAvailable >> pageShift;
-	uint64_t requiredPTESize = pagesAvailable * PAGETABLEENTRY;
+	uint64_t mixedPageCount = 3 + 24;
+	//uint64_t requiredPTESize = pagesAvailable * PAGETABLEENTRY;
+	uint64_t requiredPTESize = mixedPageCount * PAGETABLEENTRY;
 	uint64_t requiredPTEPages = requiredPTESize >> pageShift;
 	if ((requiredPTEPages << pageShift) != requiredPTESize) {
 		requiredPTEPages++;
