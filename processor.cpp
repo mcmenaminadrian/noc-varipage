@@ -113,17 +113,17 @@ void Processor::writeOutPageAndBitmapLengths(const uint64_t& reqPTEPages,
 
 void Processor::writeOutBasicPageEntries(const uint64_t& pagesAvailable)
 {
-	const uint64_t tablesOffset = 1 << pageShift;
-    for (unsigned int i = 0; i < pagesAvailable; i++) {
-        long memoryLocalOffset = i * PAGETABLEENTRY + tablesOffset;
-        masterTile->writeLong(
-            PAGETABLESLOCAL + memoryLocalOffset + VOFFSET,
-                    i * (1 << pageShift) + PAGETABLESLOCAL);
-        masterTile->writeLong(
-            PAGETABLESLOCAL + memoryLocalOffset + POFFSET,
-                    i * (1 << pageShift) + PAGETABLESLOCAL);
+	const uint64_t tablesOffset = 2 << pageShift; //allocate 1024 bytes for 'kernel'
+	for (unsigned int i = 0; i < pagesAvailable; i++) {
+        	long memoryLocalOffset = i * PAGETABLEENTRY + tablesOffset;
+        	masterTile->writeLong(
+           		PAGETABLESLOCAL + memoryLocalOffset + VOFFSET,
+                    	i * (1 << pageShift) + PAGETABLESLOCAL);
+        	masterTile->writeLong(
+            		PAGETABLESLOCAL + memoryLocalOffset + POFFSET,
+                    	i * (1 << pageShift) + PAGETABLESLOCAL);
 		masterTile->writeLong(
-            PAGETABLESLOCAL + memoryLocalOffset + FRAMEOFFSET, i);
+            		PAGETABLESLOCAL + memoryLocalOffset + FRAMEOFFSET, i);
 		for (int j = FLAGOFFSET; j < ENDOFFSET; j++) {
 			masterTile->writeByte(
 				PAGETABLESLOCAL + memoryLocalOffset + j, 0);
@@ -134,27 +134,31 @@ void Processor::writeOutBasicPageEntries(const uint64_t& pagesAvailable)
 void Processor::markUpBasicPageEntries(const uint64_t& reqPTEPages,
 	const uint64_t& reqBitmapPages)
 {
-	//mark for page tables, bit map and 1 notional page for kernel
+	//mark for page tables, bit map and 2 notional page for kernel
 	for (unsigned int i = 0; i <= reqPTEPages + reqBitmapPages; i++) {
-		const uint64_t pageEntryBase = (1 << pageShift) +
+		const uint64_t pageEntryBase = (2 << pageShift) +
 			i * PAGETABLEENTRY + PAGETABLESLOCAL;
 		const uint64_t mappingAddress = PAGETABLESLOCAL +
 			i * (1 << pageShift);
-        masterTile->writeLong(pageEntryBase + VOFFSET,
-            mappingAddress);
-        masterTile->writeLong(pageEntryBase + POFFSET,
-            mappingAddress);
+        	masterTile->writeLong(pageEntryBase + VOFFSET,
+            		mappingAddress);
+        	masterTile->writeLong(pageEntryBase + POFFSET,
+            		mappingAddress);
 		masterTile->writeWord32(pageEntryBase + FLAGOFFSET, 0x07);
 	}
 	//stack
-    uint stackFrame = (TILE_MEM_SIZE >> pageShift) - 1;
-	const uint64_t stackInTable = (1 << pageShift) + 
-        stackFrame * PAGETABLEENTRY + PAGETABLESLOCAL;
-    masterTile->writeLong(stackInTable + VOFFSET,
-        stackFrame * (1 << pageShift) + PAGETABLESLOCAL);
-    masterTile->writeLong(stackInTable + POFFSET,
-        stackFrame * (1 << pageShift) + PAGETABLESLOCAL);
-	masterTile->writeWord32(stackInTable + FLAGOFFSET, 0x07);
+    	uint stackFrame = (TILE_MEM_SIZE >> pageShift) - 1;
+	const uint64_t stackInTable = (2 << pageShift) + 
+        	stackFrame * PAGETABLEENTRY + PAGETABLESLOCAL;
+	for (unsigned int i = 0; i < 2; i++) {	
+    		masterTile->writeLong(stackInTable + VOFFSET,
+        		stackFrame * (1 << pageShift) + PAGETABLESLOCAL);
+    		masterTile->writeLong(stackInTable + POFFSET,
+       			stackFrame * (1 << pageShift) + PAGETABLESLOCAL);
+		masterTile->writeWord32(stackInTable + FLAGOFFSET, 0x07);
+		stackInTable -= PAGETABLEENTRY;
+		stackFrame--;
+	}
 }
 
 void Processor::flushPagesStart()
@@ -167,21 +171,23 @@ void Processor::flushPagesEnd()
     interruptEnd();
 }
 
+
+//512 byte pages
 void Processor::createMemoryMap(Memory *local, long pShift)
 {
 	localMemory = local;
-	pageShift = pShift;
+	pageShift = pShifti - 1; //512 bytes
 	memoryAvailable = localMemory->getSize();
 	pagesAvailable = memoryAvailable >> pageShift;
 	uint64_t requiredPTESize = pagesAvailable * PAGETABLEENTRY;
-    uint64_t requiredPTEPages = requiredPTESize >> pageShift;
+	uint64_t requiredPTEPages = requiredPTESize >> pageShift;
 	if ((requiredPTEPages << pageShift) != requiredPTESize) {
 		requiredPTEPages++;
 	}
 
 	stackPointer = TILE_MEM_SIZE + PAGETABLESLOCAL;
-    stackPointerUnder = stackPointer;
-    stackPointerOver = stackPointer - (1 << pageShift);
+	stackPointerUnder = stackPointer;
+	stackPointerOver = stackPointer - (2 << pageShift); //1024 bytes for stack
 
 	zeroOutTLBs(pagesAvailable);
 
@@ -208,14 +214,14 @@ void Processor::createMemoryMap(Memory *local, long pShift)
             markBitmapInit(i, pageStart + j * BITMAP_BYTES);
 		}
 	}
-    //TLB and bitmap for stack
-    const uint64_t stackPage = PAGETABLESLOCAL + TILE_MEM_SIZE -
-            (1 << pageShift);
-    const uint64_t stackPageNumber = pagesAvailable - 1;
-    fixTLB(stackPageNumber, stackPage);
-    for (unsigned int i = 0; i < bitmapSize * BITS_PER_BYTE; i++) {
-        markBitmapInit(stackPageNumber, stackPage + i * BITMAP_BYTES);
-    }
+	//TLB and bitmap for stack
+	const uint64_t stackPage = PAGETABLESLOCAL + TILE_MEM_SIZE -
+        	(1 << pageShift);
+	const uint64_t stackPageNumber = pagesAvailable - 1;
+	fixTLB(stackPageNumber, stackPage);
+	for (unsigned int i = 0; i < bitmapSize * BITS_PER_BYTE; i++) {
+		markBitmapInit(stackPageNumber, stackPage + i * BITMAP_BYTES);
+	}
 }
 
 bool Processor::isBitmapValid(const uint64_t& address,
