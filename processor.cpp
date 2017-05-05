@@ -35,6 +35,7 @@
 //Bit 0 :   true = REAL, false = VIRTUAL
 //Bit 1 :   CarryBit
 
+const static uint64_t KERNELPAGES = 2; //2 for 512 byte pages 
 const static uint64_t BITMAPDELAY = 0;
 
 using namespace std;
@@ -409,7 +410,7 @@ void Processor::writeBackMemory(const uint64_t& frameNo)
     const uint64_t totalPTEPages =
         masterTile->readLong(fetchAddressRead(PAGETABLESLOCAL));
     const uint64_t bitmapOffset =
-        (1 + totalPTEPages) * (1 << pageShift);
+        (KERNELPAGES + totalPTEPages) * (1 << pageShift);
     const uint64_t bitmapSize = (1 << pageShift) / BITMAP_BYTES;
     uint64_t bitToRead = frameNo * bitmapSize;
     const uint64_t physicalAddress = mapToGlobalAddress(
@@ -494,7 +495,7 @@ void Processor::fixBitmap(const uint64_t& frameNo)
 	const uint64_t totalPTEPages =
 		masterTile->readLong(fetchAddressRead(PAGETABLESLOCAL));
 	uint64_t bitmapOffset =
-		(1 + totalPTEPages) * (1 << pageShift);
+		(KERNELPAGES + totalPTEPages) * (1 << pageShift);
 	const uint64_t bitmapSizeBytes =
 		(1 << pageShift) / (BITMAP_BYTES * 8);
 	const uint64_t bitmapSizeBits = bitmapSizeBytes * 8;
@@ -521,7 +522,7 @@ void Processor::markBitmapStart(const uint64_t &frameNo,
     const uint64_t totalPTEPages =
         masterTile->readLong(PAGETABLESLOCAL);
     uint64_t bitmapOffset =
-        (1 + totalPTEPages) * (1 << pageShift);
+        (KERNELPAGES + totalPTEPages) * (1 << pageShift);
     const uint64_t bitmapSizeBytes =
         (1 << pageShift) / (BITMAP_BYTES * 8);
     for (unsigned int i = 0; i < bitmapSizeBytes; i++) {
@@ -543,7 +544,7 @@ void Processor::markBitmap(const uint64_t& frameNo,
 	const uint64_t totalPTEPages =
 		masterTile->readLong(PAGETABLESLOCAL);
 	uint64_t bitmapOffset =
-		(1 + totalPTEPages) * (1 << pageShift);
+		(KERNELPAGES + totalPTEPages) * (1 << pageShift);
 	const uint64_t bitmapSizeBytes =
 		(1 << pageShift) / (BITMAP_BYTES * 8);
 	uint64_t bitToMark = (address & bitMask) / BITMAP_BYTES;
@@ -564,7 +565,7 @@ void Processor::markBitmapInit(const uint64_t& frameNo,
     const uint64_t totalPTEPages =
         masterTile->readLong(PAGETABLESLOCAL);
     uint64_t bitmapOffset =
-        (1 + totalPTEPages) * (1 << pageShift);
+        (KERNELPAGES + totalPTEPages) * (1 << pageShift);
     const uint64_t bitmapSizeBytes =
         (1 << pageShift) / (BITMAP_BYTES * 8);
     uint64_t bitToMark = (address & bitMask) / BITMAP_BYTES;
@@ -589,49 +590,48 @@ void Processor::fixTLB(const uint64_t& frameNo,
 const pair<uint64_t, uint8_t>
     Processor::mapToGlobalAddress(const uint64_t& address)
 {
-    uint64_t globalPagesBase = 0x800;
-    //48 bit addresses
-    uint64_t address48 = address & 0xFFFFFFFFFFFF;
-    uint64_t superDirectoryIndex = address48 >> 37;
-    uint64_t directoryIndex = (address48 >> 28) & 0x1FF;
-    uint64_t superTableIndex = (address48 >> 19) & 0x1FF;
-    uint64_t tableIndex = (address48 & 0x7FFFF) >> pageShift;
-    waitATick();
-    //read off the superDirectory number
-    //simulate read of global table
-    fetchAddressToRegister();
-    uint64_t ptrToDirectory = masterTile->readLong(globalPagesBase +
-        superDirectoryIndex * (sizeof(uint64_t) + sizeof(uint8_t)));
-    if (ptrToDirectory == 0) {
-        cerr << "Bad SuperDirectory: " << hex << address << endl;
-        throw new bad_exception();
-    }
-    waitATick();
-    fetchAddressToRegister();
-    uint64_t ptrToSuperTable = masterTile->readLong(ptrToDirectory +
-        directoryIndex * (sizeof(uint64_t) + sizeof(uint8_t)));
-    if (ptrToSuperTable == 0) {
-        cerr << "Bad Directory: " << hex << address << endl;
-        throw new bad_exception();
-    }
-    waitATick();
-    fetchAddressToRegister();
-    uint64_t ptrToTable = masterTile->readLong(ptrToSuperTable +
-        superTableIndex * (sizeof(uint64_t) + sizeof(uint8_t)));
-    if (ptrToTable == 0) {
-        cerr << "Bad SuperTable: " << hex << address << endl;
-        throw new bad_exception();
-    }
-    waitATick();
-    fetchAddressToRegister();
-    pair<uint64_t, uint8_t> globalPageTableEntry(
-        masterTile->readLong(ptrToTable + tableIndex *
-                 (sizeof(uint64_t) + sizeof(uint8_t))),
-        masterTile->readByte(ptrToTable + tableIndex *
-                 (sizeof(uint64_t) + sizeof(uint8_t)) + sizeof(uint64_t)));
-    waitATick();
-    return globalPageTableEntry;
-
+	uint64_t globalPagesBase = 0x800;
+	//48 bit addresses
+	uint64_t address48 = address & 0xFFFFFFFFFFFF;
+	uint64_t superDirectoryIndex = address48 >> 37;
+	uint64_t directoryIndex = (address48 >> 28) & 0x1FF;
+	uint64_t superTableIndex = (address48 >> 19) & 0x1FF;
+	uint64_t tableIndex = (address48 & 0x7FFFF) >> (pageShift + 1);
+	waitATick();
+	//read off the superDirectory number
+	//simulate read of global table
+	fetchAddressToRegister();
+	uint64_t ptrToDirectory = masterTile->readLong(globalPagesBase +
+        	superDirectoryIndex * (sizeof(uint64_t) + sizeof(uint8_t)));
+	if (ptrToDirectory == 0) {
+		cerr << "Bad SuperDirectory: " << hex << address << endl;
+		throw new bad_exception();
+	}
+	waitATick();
+	fetchAddressToRegister();
+	uint64_t ptrToSuperTable = masterTile->readLong(ptrToDirectory +
+		directoryIndex * (sizeof(uint64_t) + sizeof(uint8_t)));
+	if (ptrToSuperTable == 0) {
+		cerr << "Bad Directory: " << hex << address << endl;
+		throw new bad_exception();
+	}
+	waitATick();
+	fetchAddressToRegister();
+	uint64_t ptrToTable = masterTile->readLong(ptrToSuperTable +
+		superTableIndex * (sizeof(uint64_t) + sizeof(uint8_t)));
+	if (ptrToTable == 0) {
+		cerr << "Bad SuperTable: " << hex << address << endl;
+		throw new bad_exception();
+	}
+	waitATick();
+	fetchAddressToRegister();
+	pair<uint64_t, uint8_t> globalPageTableEntry(
+		masterTile->readLong(ptrToTable + tableIndex *
+		(sizeof(uint64_t) + sizeof(uint8_t))),
+		masterTile->readByte(ptrToTable + tableIndex *
+		(sizeof(uint64_t) + sizeof(uint8_t)) + sizeof(uint64_t)));
+	waitATick();
+	return globalPageTableEntry;
 }
 
 uint64_t Processor::triggerHardFault(const uint64_t& address,
