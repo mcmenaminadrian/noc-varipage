@@ -123,12 +123,16 @@ fail:
 //memory regions - pair: 1st is number, 2nd is flag
 //on flag - bit 1 is valid
 //48 bit addresses
+const static uint64_t SUPERDIRLEN = 11;
+const static uint64_t DIRLEN = 9;
+const static uint64_t SUPERTABLELEN = 9;
+const static uint64_t TABLELEN = 10;
 unsigned long Noc::createBasicPageTables()
 {
     uint64_t startOfPageTables = 2048;
 	//create a bottom of the heirarchy table
 
-    PageTable superDirectory(11);
+    PageTable superDirectory(SUPERDIRLEN);
     uint64_t runLength = 0;
     uint64_t superDirectoryLength =
 		superDirectory.streamToMemory(globalMemory[0],
@@ -141,7 +145,7 @@ unsigned long Noc::createBasicPageTables()
     runLength += superDirectoryLength;
     uint64_t startOfDirectory = startOfPageTables + runLength;
 
-    PageTable directory(9);
+    PageTable directory(DIRLEN);
     uint64_t directoryLength =
         directory.streamToMemory(globalMemory[0], startOfDirectory);
     globalMemory[0].writeLong(startOfDirectory, startOfDirectory + directoryLength);
@@ -149,9 +153,8 @@ unsigned long Noc::createBasicPageTables()
 	runLength += directoryLength;
     uint64_t startOfSuperTable = startOfPageTables + runLength;
 
-
     //page tables for low addresses here
-    PageTable superTable_A(9);
+    PageTable superTable_A(SUPERTABLELEN);
 
     uint64_t superTableLength =
         superTable_A.streamToMemory(globalMemory[0], startOfSuperTable);
@@ -162,7 +165,7 @@ unsigned long Noc::createBasicPageTables()
 
     vector<PageTable> tables;
     for (int i = 0; i < PAGE_TABLE_COUNT; i++) {
-        PageTable pageTable(9);
+        PageTable pageTable(TABLELEN);
         tables.push_back(pageTable);
     }
     uint64_t tableLength =
@@ -213,7 +216,7 @@ unsigned long Noc::createBasicPageTables()
 
     //add in yet more tables at the bottom
     for (int i = 0; i < PAGE_TABLE_COUNT; i++) {
-        PageTable pageTable(8);
+        PageTable pageTable(9);
         tables.push_back(pageTable);
     }
 
@@ -234,6 +237,7 @@ unsigned long Noc::createBasicPageTables()
     for (unsigned int i = 0; i < (1 << 8) * PAGE_TABLE_COUNT; i++) {
         uint64_t offsetB = startSecondGroupPT +
                 i * (sizeof(uint64_t) + sizeof(uint8_t));
+	
         globalMemory[0].writeLong(offsetB, 0x80000000 + i * (1 << PAGE_SHIFT));
         uint8_t flagOut = 0x01;
         globalMemory[0].writeByte(offsetB + sizeof(uint64_t), flagOut);
