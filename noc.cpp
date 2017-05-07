@@ -29,7 +29,7 @@
 #include "ControlThread.hpp"
 
 
-#define PAGE_TABLE_COUNT 512
+#define PAGE_TABLE_COUNT 1024
 
 using namespace std;
 using namespace xercesc;
