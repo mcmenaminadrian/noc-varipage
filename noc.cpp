@@ -194,61 +194,62 @@ unsigned long Noc::createBasicPageTables()
 		globalMemory[0].writeByte(offsetB + sizeof(uint64_t), flagOut);
 	}
 
-    runLength += tableLength * PAGE_TABLE_COUNT;
+	runLength += tableLength * PAGE_TABLE_COUNT;
 
 #define DIR_OFFSET 8
-    //now page tables for higher addresses
-    startOfSuperTable = startOfPageTables + runLength;
-    globalMemory[0].writeLong(startOfDirectory +
-        DIR_OFFSET * (sizeof(uint64_t) + sizeof(uint8_t)),
-        startOfSuperTable);
-    globalMemory[0].writeByte(startOfDirectory +
-        DIR_OFFSET * (sizeof (uint64_t) + sizeof(uint8_t)) + sizeof(uint64_t), 1);
+	//now page tables for higher addresses
+	startOfSuperTable = startOfPageTables + runLength;
+	globalMemory[0].writeLong(startOfDirectory +
+		DIR_OFFSET * (sizeof(uint64_t) + sizeof(uint8_t)),
+		startOfSuperTable);
+	globalMemory[0].writeByte(startOfDirectory +
+		DIR_OFFSET * (sizeof (uint64_t) + sizeof(uint8_t)) +
+		sizeof(uint64_t), 1);
 
-    PageTable superTable_B(SUPERTABLELEN);
-    superTable_B.streamToMemory(globalMemory[0], startOfSuperTable);
-    globalMemory[0].writeLong(startOfSuperTable,
-        startOfSuperTable + superTableLength);
-    globalMemory[0].writeByte(startOfSuperTable + sizeof(uint64_t), 1);
-    runLength += superTableLength;
-    uint64_t startSecondGroupPT = runLength + startOfPageTables;
+	PageTable superTable_B(SUPERTABLELEN);
+	superTable_B.streamToMemory(globalMemory[0], startOfSuperTable);
+	globalMemory[0].writeLong(startOfSuperTable,
+		startOfSuperTable + superTableLength);
+	globalMemory[0].writeByte(startOfSuperTable + sizeof(uint64_t), 1);
+	runLength += superTableLength;
+	uint64_t startSecondGroupPT = runLength + startOfPageTables;
 
-    //add in yet more tables at the bottom
-    for (int i = 0; i < PAGE_TABLE_COUNT; i++) {
-        PageTable pageTable(TABLELEN);
-        tables.push_back(pageTable);
-    }
+	//add in yet more tables at the bottom
+	for (int i = 0; i < PAGE_TABLE_COUNT; i++) {
+		PageTable pageTable(TABLELEN);
+		tables.push_back(pageTable);
+	}
 
-    for (int i = PAGE_TABLE_COUNT; i < (2 * PAGE_TABLE_COUNT); i++) {
-        tables[i].streamToMemory(globalMemory[0],
-                startOfPageTables + runLength +
-                (i - PAGE_TABLE_COUNT) * tableLength);
-    }
-    //now fill in superTable_B
-    for (int i = 0; i < PAGE_TABLE_COUNT; i++) {
-        uint64_t offsetA = startOfSuperTable +
-                i * (sizeof(uint64_t) + sizeof(uint8_t));
-        globalMemory[0].writeLong(offsetA, startSecondGroupPT + i * tableLength);
-        globalMemory[0].writeByte(offsetA + sizeof(uint64_t), 0x01);
-    }
+	for (int i = PAGE_TABLE_COUNT; i < (2 * PAGE_TABLE_COUNT); i++) {
+		tables[i].streamToMemory(globalMemory[0],
+		startOfPageTables + runLength +
+			(i - PAGE_TABLE_COUNT) * tableLength);
+	}
+	//now fill in superTable_B
+	for (int i = 0; i < PAGE_TABLE_COUNT; i++) {
+		uint64_t offsetA = startOfSuperTable +
+			i * (sizeof(uint64_t) + sizeof(uint8_t));
+		globalMemory[0].writeLong(offsetA, startSecondGroupPT + i * tableLength);
+		globalMemory[0].writeByte(offsetA + sizeof(uint64_t), 0x01);
+	}
 
-    //now the page tables themselves
-    for (unsigned int i = 0; i < (1 << TABLELEN) * PAGE_TABLE_COUNT; i++) {
-        uint64_t offsetB = startSecondGroupPT +
-                i * (sizeof(uint64_t) + sizeof(uint8_t));
-	
-        globalMemory[0].writeLong(offsetB, 0x80000000 + i * (1 << PAGE_SHIFT));
-        uint8_t flagOut = 0x01;
-        globalMemory[0].writeByte(offsetB + sizeof(uint64_t), flagOut);
-    }
+	//now the page tables themselves
+	for (unsigned int i = 0; i < (1 << TABLELEN) * PAGE_TABLE_COUNT; i++) {
+		uint64_t offsetB = startSecondGroupPT +
+			i * (sizeof(uint64_t) + sizeof(uint8_t));
+		globalMemory[0].writeLong(offsetB, 0x80000000 +
+				i * (1 << PAGE_SHIFT));
+		uint8_t flagOut = 0x01;
+		globalMemory[0].writeByte(offsetB + sizeof(uint64_t), flagOut);
+	}
 
-    runLength += tableLength * PAGE_TABLE_COUNT;
+	runLength += tableLength * PAGE_TABLE_COUNT;
 
-    unsigned long pagesUsedForTables = runLength >> PAGE_SHIFT;
-    if (runLength%(1 << PAGE_SHIFT)) {
-            pagesUsedForTables++;
-    }
-	
+	unsigned long pagesUsedForTables = runLength >> PAGE_SHIFT;
+	if (runLength%(1 << PAGE_SHIFT)) {
+		pagesUsedForTables++;
+	}
+
 	return startOfPageTables;
 }
 
