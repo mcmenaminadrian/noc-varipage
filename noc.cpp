@@ -245,7 +245,7 @@ unsigned long Noc::createBasicPageTables()
     runLength += tableLength * PAGE_TABLE_COUNT;
 
     unsigned long pagesUsedForTables = runLength >> PAGE_SHIFT;
-    if (runLength%(1 << pageShift)) {
+    if (runLength%(1 << PAGE_SHIFT)) {
             pagesUsedForTables++;
     }
 	
