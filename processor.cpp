@@ -586,17 +586,35 @@ void Processor::fixTLB(const uint64_t& frameNo,
 	get<2>(tlbs[frameNo]) = true;
 }
 
-//below is always called from the interrupt context
+// bit lengths
+static inline uint64_t bit_mask(uint64_t x)
+{
+	return (x >= sizeof(uint64_t) * CHAR_BIT) ?
+	      (uint64_t) -1 : (1U << x) - 1;
+}	
+
+const static uint64_t SUPER_DIR_BL = 11;
+const static uint64_t SUPER_DIR_SHIFT = 37;
+const static uint64_t DIR_BL = 9;
+const static uint64_t DIR_SHIFT = 28;
+const static uint64_t SUPER_TAB_BL = 9;
+const static uint64_t SUPER_TAB_SHIFT = 19;
+const static uint64_t TAB_BL = 19; //10 + 9 for 512 byte pages
+const static uint64_t TAB_SHIFT = 9; //9 for 512, 10 for 1024 pages
+const static uint64_t ADDRESS_SPACE_LEN = 48;
+//below is always called from the interrupt context 
 const pair<uint64_t, uint8_t>
     Processor::mapToGlobalAddress(const uint64_t& address)
 {
 	uint64_t globalPagesBase = 0x800;
 	//48 bit addresses
-	uint64_t address48 = address & 0xFFFFFFFFFFFF;
-	uint64_t superDirectoryIndex = address48 >> 37;
-	uint64_t directoryIndex = (address48 >> 28) & 0x1FF;
-	uint64_t superTableIndex = (address48 >> 19) & 0x1FF;
-	uint64_t tableIndex = (address48 & 0x7FFFF) >> (pageShift + 1);
+	uint64_t address48 = address & bit_mask(ADDRESS_SPACE_LEN);
+	uint64_t superDirectoryIndex =
+		(address48 >> SUPER_DIR_SHIFT) & bit_mask(SUPER_DIR_BL);
+	uint64_t directoryIndex = (address48 >> DIR_SHIFT) & bit_mask(DIR_BL);
+	uint64_t superTableIndex =
+		(address48 >> SUPER_TAB_SHIFT) & bit_mask(SUPER_TAB_BL);
+	uint64_t tableIndex = (address48 & bit_mask(TAB_BL)) >> TAB_SHIFT; 
 	waitATick();
 	//read off the superDirectory number
 	//simulate read of global table
