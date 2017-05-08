@@ -589,8 +589,11 @@ void Processor::fixTLB(const uint64_t& frameNo,
 // bit lengths
 static inline uint64_t bit_mask(uint64_t x)
 {
-	return (x >= sizeof(uint64_t) * CHAR_BIT) ?
-	      (uint64_t) -1 : (1U << x) - 1;
+	uint64_t mask = 0;
+	for (int i = 0; i < x; i++) {
+		mask |= (1 << i);
+	}
+	return mask;
 }	
 
 const static uint64_t SUPER_DIR_BL = 11;
