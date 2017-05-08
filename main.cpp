@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     uint64_t blockSize = 0x100000000;
     long rows = 16;
     long columns = 8;
-    long pageShift = PAGE_SHIFT - 1;
+    long pageShift = PAGE_SHIFT;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-?") == 0) {

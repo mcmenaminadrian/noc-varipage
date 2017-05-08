@@ -177,7 +177,7 @@ void Processor::flushPagesEnd()
 void Processor::createMemoryMap(Memory *local, long pShift)
 {
 	localMemory = local;
-	pageShift = pShift - 1; //512 bytes
+	pageShift = pShift; //512 bytes
 	memoryAvailable = localMemory->getSize();
 	pagesAvailable = memoryAvailable >> pageShift;
 	uint64_t requiredPTESize = pagesAvailable * PAGETABLEENTRY;
