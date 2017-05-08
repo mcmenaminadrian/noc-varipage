@@ -590,8 +590,9 @@ void Processor::fixTLB(const uint64_t& frameNo,
 static inline uint64_t bit_mask(uint64_t x)
 {
 	uint64_t mask = 0;
+	const uint64_t digit = 1;
 	for (uint64_t i = 0; i < x; i++) {
-		mask |= (1 << i);
+		mask |= (digit << i);
 	}
 	return mask;
 }	
