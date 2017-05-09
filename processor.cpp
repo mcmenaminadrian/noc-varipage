@@ -141,7 +141,7 @@ void Processor::markUpBasicPageEntries(const uint64_t& reqPTEPages,
 	//mark for page tables, bit map and 2 notional page for kernel
 	for (unsigned int i = 0;
 			i < (reqPTEPages + reqBitmapPages + KERNELPAGES); i++) {
-		const uint64_t pageEntryBase = (2 << pageShift) +
+		const uint64_t pageEntryBase = (1 << pageShift) * KERNELPAGES +
 			i * PAGETABLEENTRY + PAGETABLESLOCAL;
 		const uint64_t mappingAddress = PAGETABLESLOCAL +
 			i * (1 << pageShift);
@@ -153,7 +153,7 @@ void Processor::markUpBasicPageEntries(const uint64_t& reqPTEPages,
 	}
 	//stack
     	uint64_t stackFrame = (TILE_MEM_SIZE >> pageShift) - 1;
-	uint64_t stackInTable = (STACKPAGES << pageShift) + 
+	uint64_t stackInTable = (1 << pageShift) * STACKPAGES + 
         	stackFrame * PAGETABLEENTRY + PAGETABLESLOCAL;
 	for (unsigned int i = 0; i < STACKPAGES; i++) {	
     		masterTile->writeLong(stackInTable + VOFFSET,
@@ -209,13 +209,14 @@ void Processor::createMemoryMap(Memory *local, long pShift)
 	pageMask = pageMask >> pageShift;
 	pageMask = pageMask << pageShift;
 	bitMask = ~ pageMask;
-	uint64_t pageCount = requiredPTEPages + requiredBitmapPages + 1;
+	uint64_t pageCount =
+		requiredPTEPages + requiredBitmapPages + KERNELPAGES;
 	for (unsigned int i = 0; i <= pageCount; i++) {
 		const uint64_t pageStart =
 			PAGETABLESLOCAL + i * (1 << pageShift);
 		fixTLB(i, pageStart);
-        for (unsigned int j = 0; j < bitmapSize * BITS_PER_BYTE; j++) {
-            markBitmapInit(i, pageStart + j * BITMAP_BYTES);
+        	for (unsigned int j = 0; j < bitmapSize * BITS_PER_BYTE; j++) {
+			markBitmapInit(i, pageStart + j * BITMAP_BYTES);
 		}
 	}
 	//TLB and bitmap for stack
@@ -365,15 +366,16 @@ const pair<const uint64_t, bool> Processor::getFreeFrame()
 	uint64_t frames = (localMemory->getSize()) >> pageShift;
 	uint64_t couldBe = 0xFFFF;
 	for (uint64_t i = 0; i < frames; i++) {
-		uint32_t flags = masterTile->readWord32((1 << pageShift)
+		uint32_t flags = masterTile->readWord32(
+			(1 << pageShift) * KERNELPAGES
 			+ i * PAGETABLEENTRY + FLAGOFFSET + PAGETABLESLOCAL);
-        if (!(flags & 0x01)) {
-            return pair<const uint64_t, bool>(i, false);
-        }
-        if (flags & 0x02) {
+		if (!(flags & 0x01)) {
+			return pair<const uint64_t, bool>(i, false);
+		}
+        	if (flags & 0x02) {
 			continue;
 		}
-        else if (!(flags & 0x04)) {
+        	else if (!(flags & 0x04)) {
 			couldBe = i;
 		}
 	}
