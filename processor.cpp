@@ -389,66 +389,69 @@ const pair<const uint64_t, bool> Processor::getFreeFrame()
 //drop page from TLBs and page tables - no write back
 void Processor::dropPage(const uint64_t& frameNo)
 {
-    waitATick();
-    //firstly get the address
-    const uint64_t pageAddress = masterTile->readLong(
-        frameNo * PAGETABLEENTRY + PAGETABLESLOCAL + VOFFSET +
-        (1 << pageShift));
-    dumpPageFromTLB(pageAddress);
-    //mark as invalid in page table
-    waitATick();
-    masterTile->writeWord32(frameNo * PAGETABLEENTRY + PAGETABLESLOCAL +
-        FLAGOFFSET + (1 << pageShift), 0);
+	waitATick();
+	//firstly get the address
+	const uint64_t pageAddress = masterTile->readLong(
+		frameNo * PAGETABLEENTRY + PAGETABLESLOCAL + VOFFSET +
+		(1 << pageShift)* KERNELPAGES);
+	dumpPageFromTLB(pageAddress);
+	//mark as invalid in page table
+	waitATick();
+	masterTile->writeWord32(frameNo * PAGETABLEENTRY + PAGETABLESLOCAL +
+		FLAGOFFSET + (1 << pageShift) * KERNELPAGES, 0);
 }
 
 //only used to dump a frame
 void Processor::writeBackMemory(const uint64_t& frameNo)
 {
-    //is this a read-only frame?
-    if (localMemory->readWord32((1 << pageShift) + frameNo * PAGETABLEENTRY
-        + FLAGOFFSET) & 0x08) {
-        return;
-    }
-    //find bitmap for this frame
-    const uint64_t totalPTEPages =
-        masterTile->readLong(fetchAddressRead(PAGETABLESLOCAL));
-    const uint64_t bitmapOffset =
-        (KERNELPAGES + totalPTEPages) * (1 << pageShift);
-    const uint64_t bitmapSize = (1 << pageShift) / BITMAP_BYTES;
-    uint64_t bitToRead = frameNo * bitmapSize;
-    const uint64_t physicalAddress = mapToGlobalAddress(
-        localMemory->readLong((1 << pageShift) +
-        frameNo * PAGETABLEENTRY)).first;
-    long byteToRead = -1;
-    uint8_t byteBit = 0;
-    for (unsigned int i = 0; i < bitmapSize; i++)
-    {
-        long nextByte = bitToRead / 8;
-        if (nextByte != byteToRead) {
-            byteBit = localMemory->readByte(bitmapOffset + nextByte);
-            byteToRead = nextByte;
-        }
-        uint8_t actualBit = bitToRead%8;
-        if (byteBit & (1 << actualBit)) {
-            //simulate transfer
-            transferLocalToGlobal(frameNo * (1 << pageShift) + PAGETABLESLOCAL +
-                i * BITMAP_BYTES, tlbs[frameNo], BITMAP_BYTES);
-            for (unsigned int j = 0;
-                    j < BITMAP_BYTES/sizeof(uint64_t); j++)
-            {
-                //actual transfer done in here
-                waitATick();
-                uint64_t toGo = masterTile->readLong(
-                    fetchAddressRead(frameNo * (1 << pageShift) +
-                    PAGETABLESLOCAL + i * BITMAP_BYTES +
-                    j * sizeof(uint64_t)));
-                masterTile->writeLong(fetchAddressWrite(
-                    physicalAddress + i * BITMAP_BYTES
-                    + j * sizeof(uint64_t)), toGo);
-            }
-        }
-        bitToRead++;
-    }
+	//is this a read-only frame?
+	if (localMemory->readWord32((1 << pageShift) * KERNELPAGES +
+		frameNo * PAGETABLEENTRY + FLAGOFFSET) & 0x08) {
+    		return;
+	}
+	//find bitmap for this frame
+	const uint64_t totalPTEPages =
+		masterTile->readLong(fetchAddressRead(PAGETABLESLOCAL));
+	const uint64_t bitmapOffset =
+		(KERNELPAGES + totalPTEPages) * (1 << pageShift);
+	const uint64_t bitmapSize = (1 << pageShift) / BITMAP_BYTES;
+	uint64_t bitToRead = frameNo * bitmapSize;
+	const uint64_t physicalAddress = mapToGlobalAddress(
+		localMemory->readLong((1 << pageShift) +
+		frameNo * PAGETABLEENTRY)).first;
+	long byteToRead = -1;
+	uint8_t byteBit = 0;
+	for (unsigned int i = 0; i < bitmapSize; i++)
+	{
+		long nextByte = bitToRead / 8;
+		if (nextByte != byteToRead) {
+			byteBit =
+				localMemory->readByte(bitmapOffset + nextByte);
+			byteToRead = nextByte;
+		}
+		uint8_t actualBit = bitToRead%8;
+		if (byteBit & (1 << actualBit)) {
+			//simulate transfer
+			transferLocalToGlobal(frameNo * (1 << pageShift) +
+				PAGETABLESLOCAL +
+				i * BITMAP_BYTES, tlbs[frameNo], BITMAP_BYTES);
+			for (unsigned int j = 0;
+				j < BITMAP_BYTES/sizeof(uint64_t); j++)
+			{
+				//actual transfer done in here
+				waitATick();
+				uint64_t toGo = masterTile->readLong(
+					fetchAddressRead(
+					frameNo * (1 << pageShift) +
+					PAGETABLESLOCAL + i * BITMAP_BYTES +
+					j * sizeof(uint64_t)));
+				masterTile->writeLong(fetchAddressWrite(
+					physicalAddress + i * BITMAP_BYTES
+					+ j * sizeof(uint64_t)), toGo);
+			}
+		}
+		bitToRead++;
+	}
 }
 
 void Processor::loadMemory(const uint64_t& frameNo,
