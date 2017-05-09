@@ -35,8 +35,11 @@
 //Bit 0 :   true = REAL, false = VIRTUAL
 //Bit 1 :   CarryBit
 
-const static uint64_t KERNELPAGES = 2; //2 for 512 byte pages 
-const static uint64_t BITMAPDELAY = 0;
+const static uint64_t KERNELPAGES = 2;	//2 gives 1k kernel on 512b paging
+const static uint64_t STACKPAGES = 2; 	//2 gives 1k stack on 512b paging
+const static uint64_t BITMAPDELAY = 0;	//0 for subcycle bitmap checks
+const static uint64_t FREEPAGES = 25;	//25 for 512b pages, 12 for 1k pages
+const static uint64_t BASEPAGES = 5;	//5 for 512b pages, 3 for 1k pages 
 
 using namespace std;
 
@@ -114,7 +117,7 @@ void Processor::writeOutPageAndBitmapLengths(const uint64_t& reqPTEPages,
 
 void Processor::writeOutBasicPageEntries(const uint64_t& pagesAvailable)
 {
-	const uint64_t tablesOffset = 2 << pageShift; //allocate 1024 bytes for 'kernel'
+	const uint64_t tablesOffset = KERNELPAGES << pageShift;
 	for (unsigned int i = 0; i < pagesAvailable; i++) {
         	long memoryLocalOffset = i * PAGETABLEENTRY + tablesOffset;
         	masterTile->writeLong(
@@ -136,7 +139,8 @@ void Processor::markUpBasicPageEntries(const uint64_t& reqPTEPages,
 	const uint64_t& reqBitmapPages)
 {
 	//mark for page tables, bit map and 2 notional page for kernel
-	for (unsigned int i = 0; i <= reqPTEPages + reqBitmapPages; i++) {
+	for (unsigned int i = 0;
+			i < (reqPTEPages + reqBitmapPages + KERNELPAGES); i++) {
 		const uint64_t pageEntryBase = (2 << pageShift) +
 			i * PAGETABLEENTRY + PAGETABLESLOCAL;
 		const uint64_t mappingAddress = PAGETABLESLOCAL +
@@ -149,9 +153,9 @@ void Processor::markUpBasicPageEntries(const uint64_t& reqPTEPages,
 	}
 	//stack
     	uint64_t stackFrame = (TILE_MEM_SIZE >> pageShift) - 1;
-	uint64_t stackInTable = (2 << pageShift) + 
+	uint64_t stackInTable = (STACKPAGES << pageShift) + 
         	stackFrame * PAGETABLEENTRY + PAGETABLESLOCAL;
-	for (unsigned int i = 0; i < 2; i++) {	
+	for (unsigned int i = 0; i < STACKPAGES; i++) {	
     		masterTile->writeLong(stackInTable + VOFFSET,
         		stackFrame * (1 << pageShift) + PAGETABLESLOCAL);
     		masterTile->writeLong(stackInTable + POFFSET,
@@ -173,11 +177,10 @@ void Processor::flushPagesEnd()
 }
 
 
-//512 byte pages
 void Processor::createMemoryMap(Memory *local, long pShift)
 {
 	localMemory = local;
-	pageShift = pShift; //512 bytes
+	pageShift = pShift;
 	memoryAvailable = localMemory->getSize();
 	pagesAvailable = memoryAvailable >> pageShift;
 	uint64_t requiredPTESize = pagesAvailable * PAGETABLEENTRY;
@@ -188,7 +191,7 @@ void Processor::createMemoryMap(Memory *local, long pShift)
 
 	stackPointer = TILE_MEM_SIZE + PAGETABLESLOCAL;
 	stackPointerUnder = stackPointer;
-	stackPointerOver = stackPointer - (2 << pageShift); //1024 bytes for stack
+	stackPointerOver = stackPointer - (STACKPAGES << pageShift);
 
 	zeroOutTLBs(pagesAvailable);
 
@@ -348,11 +351,9 @@ const pair<const uint64_t, bool> Processor::getRandomFrame()
 	waitATick();
 	//See 3.2.1 of Knuth (third edition)
 	//simple ramdom number generator
-	//pick pages 3 - 14 (0 - 11)
-        //old rand had factor of 3, better has factor of 1
-	randomPage = (1 * randomPage + 1)%12;
+	randomPage = (1 * randomPage + 1)%FREEPAGES;
 	waitATick(); //store
-	return pair<const uint64_t, bool>(randomPage + 3, true);
+	return pair<const uint64_t, bool>(randomPage + BASEPAGES, true);
 }
 	
 
@@ -467,16 +468,16 @@ void Processor::fixPageMap(const uint64_t& frameNo,
     const uint64_t& address, const bool& readOnly)
 {
 	const uint64_t pageAddress = address & pageMask;
-    const uint64_t writeBase =
-        (1 << pageShift) + frameNo * PAGETABLEENTRY;
+	const uint64_t writeBase =
+		(1 << pageShift) + frameNo * PAGETABLEENTRY;
 	waitATick();
 	localMemory->writeLong(writeBase + VOFFSET, pageAddress);
 	waitATick();
-    if (readOnly) {
-        localMemory->writeWord32(writeBase + FLAGOFFSET, 0x0D);
-    } else {
-        localMemory->writeWord32(writeBase + FLAGOFFSET, 0x05);
-    }
+	if (readOnly) {
+		localMemory->writeWord32(writeBase + FLAGOFFSET, 0x0D);
+	} else {
+		localMemory->writeWord32(writeBase + FLAGOFFSET, 0x05);
+	}
 }
 
 //write in initial page of code
@@ -933,7 +934,7 @@ void Processor::start()
 	auto bitPages = masterTile->readLong(PAGETABLESLOCAL +
 		sizeof(uint64_t));
 
-	uint64_t pagesIn = (1 + tabPages + bitPages);
+	uint64_t pagesIn = (2 + tabPages + bitPages);
 
     	programCounter = pagesIn * (1 << pageShift) + 0x9A0000;
 	fixPageMapStart(pagesIn, programCounter);

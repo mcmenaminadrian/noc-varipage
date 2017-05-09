@@ -263,7 +263,7 @@ long Noc::executeInstructions()
 
 	ptrBasePageTables = createBasicPageTables();
 
-    pBarrier = new ControlThread(0, mainWindow);
+	pBarrier = new ControlThread(0, mainWindow);
 	vector<thread *> threads;
 
 	for (int i = 0; i < columnCount * rowCount; i++) {
