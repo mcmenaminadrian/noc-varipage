@@ -417,7 +417,7 @@ void Processor::writeBackMemory(const uint64_t& frameNo)
 	const uint64_t bitmapSize = (1 << pageShift) / BITMAP_BYTES;
 	uint64_t bitToRead = frameNo * bitmapSize;
 	const uint64_t physicalAddress = mapToGlobalAddress(
-		localMemory->readLong((1 << pageShift) +
+		localMemory->readLong((1 << pageShift) * KERNELPAGES +
 		frameNo * PAGETABLEENTRY)).first;
 	long byteToRead = -1;
 	uint8_t byteBit = 0;
