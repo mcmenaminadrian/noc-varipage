@@ -665,27 +665,27 @@ const pair<uint64_t, uint8_t>
 uint64_t Processor::triggerHardFault(const uint64_t& address,
     const bool& readOnly, const bool& write)
 {
-    emit hardFault();
-    hardFaultCount++;
-    interruptBegin();
-    const pair<const uint64_t, bool> frameData = getFreeFrame();
-    if (frameData.second) {
-        writeBackMemory(frameData.first);
-    }
-    fixBitmap(frameData.first);
-    pair<uint64_t, uint8_t> translatedAddress = mapToGlobalAddress(address);
-    fixTLB(frameData.first, translatedAddress.first);
-    transferGlobalToLocal(translatedAddress.first + (address & bitMask),
-        tlbs[frameData.first], BITMAP_BYTES, write);
-    fixPageMap(frameData.first, translatedAddress.first, readOnly);
-    markBitmapStart(frameData.first, translatedAddress.first +
-        (address & bitMask));
-    for (uint64_t i = 0; i < BITMAPDELAY; i++) {
-         waitATick();
-    }
-    interruptEnd();
-    return generateAddress(frameData.first, translatedAddress.first +
-        (address & bitMask));
+	emit hardFault();
+	hardFaultCount++;
+	interruptBegin();
+	const pair<const uint64_t, bool> frameData = getFreeFrame();
+	if (frameData.second) {
+		writeBackMemory(frameData.first);
+	}
+	fixBitmap(frameData.first);
+	pair<uint64_t, uint8_t> translatedAddress = mapToGlobalAddress(address);
+	fixTLB(frameData.first, translatedAddress.first);
+	transferGlobalToLocal(translatedAddress.first + (address & bitMask),
+		tlbs[frameData.first], BITMAP_BYTES, write);
+	fixPageMap(frameData.first, translatedAddress.first, readOnly);
+	markBitmapStart(frameData.first, translatedAddress.first +
+		(address & bitMask));
+	for (uint64_t i = 0; i < BITMAPDELAY; i++) {
+		waitATick();
+	}
+	interruptEnd();
+	return generateAddress(frameData.first, translatedAddress.first +
+		(address & bitMask));
 }
 
 void Processor::incrementBlocks()
