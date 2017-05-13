@@ -1,4 +1,4 @@
-include <QObject>
+#include <QObject>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -218,12 +218,16 @@ void Processor::createMemoryMap(Memory *local, long pShift)
 		}
 	}
 	//TLB and bitmap for stack
-	const uint64_t stackPage = PAGESLOCAL + TILE_MEM_SIZE -
-        	(1 << pageShift);
-	const uint64_t stackPageNumber = pagesAvailable - 1;
-	fixTLB(stackPageNumber, stackPage);
-	for (unsigned int i = 0; i < bitmapSize * BITS_PER_BYTE; i++) {
-		markBitmapInit(stackPageNumber, stackPage + i * BITMAP_BYTES);
+	uint64_t stackPage = PAGESLOCAL + TILE_MEM_SIZE; 
+	uint64_t stackPageNumber = pagesAvailable;
+	for (unsigned int i = 0; i < STACKPAGES; i++) {
+		stackPageNumber--;
+		stackPage -= (1 << pageShift);
+		fixTLB(stackPageNumber, stackPage);
+		for (unsigned int i = 0; i < bitmapSize * BITS_PER_BYTE; i++) {
+			markBitmapInit(stackPageNumber, stackPage +
+				i * BITMAP_BYTES);
+		}
 	}
 }
 
