@@ -493,9 +493,9 @@ void Processor::fixPageMapStart(const uint64_t& frameNo,
 {
 	const uint64_t pageAddress = address & pageMask;
 	localMemory->writeLong((1 << pageShift) * KERNELPAGES +
-            frameNo * PAGETABLEENTRY + VOFFSET, pageAddress);
+		frameNo * PAGETABLEENTRY + VOFFSET, pageAddress);
 	localMemory->writeWord32((1 << pageShift) * KERNELPAGES  +
-        frameNo * PAGETABLEENTRY + FLAGOFFSET, 0x0D);
+		frameNo * PAGETABLEENTRY + FLAGOFFSET, 0x0D);
 }
 
 void Processor::fixBitmap(const uint64_t& frameNo)
@@ -730,7 +730,8 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
 			waitATick();
             		uint64_t addressInPageTable = PAGESLOCAL +
-                        	(i * PAGETABLEENTRY) + (1 << pageShift);
+                        	(i * PAGETABLEENTRY) + 
+				(1 << pageShift) * KERNELPAGES;
             		uint64_t flags =
 				masterTile->readWord32(addressInPageTable
                         	+ FLAGOFFSET);
@@ -941,6 +942,7 @@ void Processor::start()
 	//populate page table
 	//mark TLB
 	//mark bitmap
+/*
 	auto tabPages = masterTile->readLong(PAGESLOCAL);
 	auto bitPages = masterTile->readLong(PAGESLOCAL +
 		sizeof(uint64_t));
@@ -951,6 +953,7 @@ void Processor::start()
 	fixPageMapStart(pagesIn, programCounter);
 	markBitmapStart(pagesIn, programCounter);
 	fixTLB(pagesIn, programCounter);
+*/
 	switchModeVirtual();
 	ControlThread *pBarrier = masterTile->getBarrier();
 	pBarrier->waitForBegin();
