@@ -665,7 +665,7 @@ const pair<uint64_t, uint8_t>
 }
 
 uint64_t Processor::triggerHardFault(const uint64_t& address,
-    const bool& readOnly, const bool& write)
+i	const bool& readOnly, const bool& write)
 {
 	emit hardFault();
 	hardFaultCount++;
@@ -687,6 +687,29 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 	}
 	interruptEnd();
 	return generateAddress(frameData.first, translatedAddress.first +
+		(address & bitMask));
+}
+
+uint64_t Processor::triggerHardReplace(const uint64_t& frameNo,
+	const uint64_t& address, const bool& readOnly, const bool& write)
+{
+	emit hardFault();
+	hardFaultCount++;
+	interruptBegin();
+	writeBackMemory(frameNo);
+	fixBitmap(frameNo);
+	pair<uint64_t, uint8_t> translatedAddress = mapToGlobalAddress(address);
+	fixTLB(frameNo, translatedAddress.first);
+	transferGlobalToLocal(translatedAddress.first + (address & bitMask),
+		tlbs[frameNo], BITMAP_BYTES, write);
+	fixPageMap(frameNo, translatedAddress.first, readOnly);
+	markBitmapStart(frameNo, translatedAddress.first + 
+		(address & bitMask));
+	for (uint64_t i = 0; i < BITMAPDELAY; i++) {
+		waitATick();
+	}
+	interruptEnd();
+	return generateAddress(frameNo, translatedAddress.first +
 		(address & bitMask));
 }
 
@@ -752,7 +775,13 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
                 		fixTLB(i, address);
                 		waitATick();
                 		return fetchAddressRead(address);
-            		}
+				waitATick();
+            		} else if (pageSought == storedPage + 
+				(1 << pageShift)) {
+				waitATick();
+				//test idea that pages are only read in one order
+				return triggerHardReplace(i, address, readOnly, write);
+			}
 			waitATick();
         	}
         	waitATick();
