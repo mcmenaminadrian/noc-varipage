@@ -665,7 +665,7 @@ const pair<uint64_t, uint8_t>
 }
 
 uint64_t Processor::triggerHardFault(const uint64_t& address,
-i	const bool& readOnly, const bool& write)
+	const bool& readOnly, const bool& write)
 {
 	emit hardFault();
 	hardFaultCount++;

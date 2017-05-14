@@ -90,7 +90,7 @@ private:
 	uint64_t generateAddress(const uint64_t& frame,
 	const uint64_t& address) const;
     	uint64_t triggerSmallFault(
-        const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
+        	const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
         	const uint64_t& address, const bool& write);
 	void interruptBegin();
 	void interruptEnd();
@@ -99,6 +99,9 @@ private:
     		const uint64_t& size, const bool& write);
     	uint64_t triggerHardFault(const uint64_t& address, const bool& readOnly,
         	const bool& write);
+	uint64_t triggerHardReplace(const uint64_t& frameNo,
+		const uint64_t& address, const bool& readOnly,
+		const bool& write);
 	const std::pair<const uint64_t, bool> getRandomFrame();
 	const std::pair<const uint64_t, bool> getFreeFrame();
 	void loadMemory(const uint64_t& frameNo,
