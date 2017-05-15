@@ -749,6 +749,8 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
             		y++;
 		}
 		//not in TLB - but check if it is in page table
+		waitATick();
+		auto hardReplace = pair<bool, int>(false, -1);
 		waitATick(); 
 		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
 			waitATick();
@@ -775,16 +777,22 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
                 		fixTLB(i, address);
                 		waitATick();
                 		return fetchAddressRead(address);
+            		} else if (!hardReplace.first && pageSought ==
+				storedPage + (1 << pageShift)) {
 				waitATick();
-            		} else if (pageSought == storedPage + 
-				(1 << pageShift)) {
+				hardReplace.first = true;
 				waitATick();
-				//test idea that pages are only read in one order
-				return triggerHardReplace(i, address, readOnly, write);
+				hardReplace.second = i;
+				waitATick();
 			}
 			waitATick();
         	}
         	waitATick();
+		if (hardReplace.first) {
+			waitATick();
+			return triggerHardReplace(hardReplace.second, address,
+				readOnly, write);
+		}
         	return triggerHardFault(address, readOnly, write);
 	} else {
 		//what do we do if it's physical address?
