@@ -25,6 +25,8 @@
 //bit 1 - 0 for moveable, 1 for fixed
 //bit 2 - 0 for CLOCKed out, 1 for CLOCKed in
 //bit 3 - 0 for read/write, 1 for read only
+//bit 4 - 0 for single page, 1 for combo page
+//bit 5 - 0 for head of combo, 1 for tail
 
 //TLB model
 //first entry - virtual address 
@@ -40,6 +42,14 @@ const static uint64_t STACKPAGES = 2; 	//2 gives 1k stack on 512b paging
 const static uint64_t BITMAPDELAY = 0;	//0 for subcycle bitmap checks
 const static uint64_t FREEPAGES = 25;	//25 for 512b pages, 12 for 1k pages
 const static uint64_t BASEPAGES = 5;	//5 for 512b pages, 3 for 1k pages 
+
+
+const static uint8_t COMBOPAGE = 0x10;
+const static uint8_t TAILCOMBO = 0x20;
+const static uint8_t VALIDPAGE = 0x01;
+const static uint8_t FIXEDPAGE = 0x02;
+const static uint8_t CLOCKEDIN = 0x04;
+const static uint8_t READONLY  = 0x08;
 
 using namespace std;
 
@@ -147,7 +157,8 @@ void Processor::markUpBasicPageEntries(const uint64_t& reqPTEPages,
             		mappingAddress);
         	masterTile->writeLong(pageEntryBase + POFFSET,
             		mappingAddress);
-		masterTile->writeWord32(pageEntryBase + FLAGOFFSET, 0x07);
+		masterTile->writeWord32(pageEntryBase + FLAGOFFSET,
+			VALIDPAGE|CLOCKEDIN|FIXEDPAGE);
 	}
 	//stack
     	uint64_t stackFrame = (TILE_MEM_SIZE >> pageShift) - 1;
@@ -158,7 +169,8 @@ void Processor::markUpBasicPageEntries(const uint64_t& reqPTEPages,
         		stackFrame * (1 << pageShift) + PAGESLOCAL);
     		masterTile->writeLong(stackInTable + POFFSET,
        			stackFrame * (1 << pageShift) + PAGESLOCAL);
-		masterTile->writeWord32(stackInTable + FLAGOFFSET, 0x07);
+		masterTile->writeWord32(stackInTable + FLAGOFFSET, 
+			VALIDPAGE|CLOCKEDIN|FIXEDPAGE);
 		stackInTable -= PAGETABLEENTRY;
 		stackFrame--;
 	}
@@ -364,20 +376,33 @@ const pair<const uint64_t, bool> Processor::getRandomFrame()
 const pair<const uint64_t, bool> Processor::getFreeFrame()
 {
 	//have we any empty frames?
-	//we assume this to be subcycle
+	//we assume this to be (mostly) subcycle
 	uint64_t frames = (localMemory->getSize()) >> pageShift;
 	uint64_t couldBe = 0xFFFF;
+	const uint64_t baseOfPageTables = (1 << pageShift) * KERNELPAGES +
+			PAGESLOCAL;
 	for (uint64_t i = 0; i < frames; i++) {
-		uint32_t flags = masterTile->readWord32(
-			(1 << pageShift) * KERNELPAGES
-			+ i * PAGETABLEENTRY + FLAGOFFSET + PAGESLOCAL);
-		if (!(flags & 0x01)) {
+		uint32_t flags = masterTile->readWord32(baseOfPageTables
+			+ i * PAGETABLEENTRY + FLAGOFFSET);
+		if (!(flags & VALIDPAGE)) {
 			return pair<const uint64_t, bool>(i, false);
 		}
-        	if (flags & 0x02) {
+        	if (flags & FIXEDPAGE) {
 			continue;
 		}
-        	else if (!(flags & 0x04)) {
+        	else if (!(flags & CLOCKEDIN)) {
+			waitATick();
+			if (flags & COMBOPAGE) {
+				//both pages have to be marked
+				uint32_t oldFlag = masterTile->
+					readWord32(baseofPageTables +
+					(i + 1) * PAGETABLEENTRY + FLAGOFFSET);
+				waitATick();
+				if (oldFlag & CLOCKEDIN) {
+					i++;
+					continue;
+				}
+			}
 			couldBe = i;
 		}
 	}
@@ -388,27 +413,12 @@ const pair<const uint64_t, bool> Processor::getFreeFrame()
 	return getRandomFrame();
 }
 
-//drop page from TLBs and page tables - no write back
-void Processor::dropPage(const uint64_t& frameNo)
-{
-	waitATick();
-	//firstly get the address
-	const uint64_t pageAddress = masterTile->readLong(
-		frameNo * PAGETABLEENTRY + PAGESLOCAL + VOFFSET +
-		(1 << pageShift)* KERNELPAGES);
-	dumpPageFromTLB(pageAddress);
-	//mark as invalid in page table
-	waitATick();
-	masterTile->writeWord32(frameNo * PAGETABLEENTRY + PAGESLOCAL +
-		FLAGOFFSET + (1 << pageShift) * KERNELPAGES, 0);
-}
-
 //only used to dump a frame
 void Processor::writeBackMemory(const uint64_t& frameNo)
 {
 	//is this a read-only frame?
 	if (localMemory->readWord32((1 << pageShift) * KERNELPAGES +
-		frameNo * PAGETABLEENTRY + FLAGOFFSET) & 0x08) {
+		frameNo * PAGETABLEENTRY + FLAGOFFSET) & READONLY) {
     		return;
 	}
 	//find bitmap for this frame
@@ -478,13 +488,52 @@ void Processor::fixPageMap(const uint64_t& frameNo,
 	const uint64_t writeBase =
 		KERNELPAGES * (1 << pageShift) + frameNo * PAGETABLEENTRY;
 	waitATick();
+	uint32_t oldFlag = localMemory->readWord32(writeBase + FLAGOFFSET);
+	waitATick();
+	if (oldFlag & COMBOPAGE) {
+		waitATick();
+		oldFlag = localMemory->readWord32(writeBase + PAGETABLEENTRY +
+			FLAGOFFSET);
+		waitATick();
+		localMemory->writeWord32(writeBase + PAGETABLEENTRY
+			+ FLAGOFFSET, oldFlag & 0xCF);
+		waitATick();
+	}
 	localMemory->writeLong(writeBase + VOFFSET, pageAddress);
 	waitATick();
 	if (readOnly) {
-		localMemory->writeWord32(writeBase + FLAGOFFSET, 0x0D);
+		localMemory->writeWord32(writeBase + FLAGOFFSET,
+			READONLY|VALIDPAGE|CLOCKEDIN);
 	} else {
-		localMemory->writeWord32(writeBase + FLAGOFFSET, 0x05);
+		localMemory->writeWord32(writeBase + FLAGOFFSET,
+			VALIDPAGE|CLOCKEDIN);
 	}
+}
+
+
+void Processor::fixComboPageMap(const uint64_t& frameNo,
+    const uint64_t& address, const bool& readOnly)
+{
+	const uint64_t pageAddress = address & pageMask;
+	const uint64_t writeBase =
+		KERNELPAGES * (1 << pageShift) + frameNo * PAGETABLEENTRY;
+	waitATick();
+	localMemory->writeLong(writeBase + VOFFSET, pageAddress);
+	waitATick();
+	if (readOnly) {
+		localMemory->writeWord32(writeBase + FLAGOFFSET, 
+			READONLY|VALIDPAGE|CLOCKEDIN|COMBOPAGE|TAILCOMBO);
+	} else {
+		localMemory->writeWord32(writeBase + FLAGOFFSET,
+			VALIDPAGE|CLOCKEDIN|COMBOPAGE|TAILCOMBO);
+	}
+	waitATick();
+	uint32_t oldFlag = localMemory->readWord32(writeBase - PAGETABLEENTRY +
+		FLAGOFFSET);
+	waitATick();
+	localMemory->writeWord32(writeBase - PAGETABLEENTRY + FLAGOFFSET,
+		oldFlag|COMBOPAGE);
+	waitATick();
 }
 
 //write in initial page of code
@@ -702,7 +751,7 @@ uint64_t Processor::triggerHardReplace(const uint64_t& frameNo,
 	fixTLB(frameNo, translatedAddress.first);
 	transferGlobalToLocal(translatedAddress.first + (address & bitMask),
 		tlbs[frameNo], BITMAP_BYTES, write);
-	fixPageMap(frameNo, translatedAddress.first, readOnly);
+	fixComboPageMap(frameNo, translatedAddress.first, readOnly);
 	markBitmapStart(frameNo, translatedAddress.first + 
 		(address & bitMask));
 	for (uint64_t i = 0; i < BITMAPDELAY; i++) {
@@ -779,14 +828,27 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
                 		return fetchAddressRead(address);
             		} else if (!hardReplace.first && pageSought ==
 				storedPage + (1 << pageShift)) {
+				//combo page?
+				if (flags & 0x10) {
+					fixTLB(i, storedPage);
+					waitATick();
+					fixTLB(i + 1, address);
+					waitATick();
+					return fetchAddressRead(address);
+				} else { 
+					waitATick();
+					if ((i + 1) < (TOTAL_LOCAL_PAGES -
+						STACKPAGES)) {
+						hardReplace.first = true;
+						waitATick();
+						hardReplace.second = i + 1;
+						waitATick();
+					}
+					waitATick();
+				}
 				waitATick();
-				hardReplace.first = true;
-				waitATick();
-				hardReplace.second = i;
-				waitATick();
-			}
-			waitATick();
-        	}
+        		}
+		}
         	waitATick();
 		if (hardReplace.first) {
 			waitATick();
