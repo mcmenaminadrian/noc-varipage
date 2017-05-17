@@ -107,7 +107,9 @@ private:
 	void loadMemory(const uint64_t& frameNo,
 		const uint64_t& address);
 	void fixPageMap(const uint64_t& frameNo,
-        const uint64_t& address, const bool& readOnly);
+        	const uint64_t& address, const bool& readOnly);
+	void fixComboPageMap(const uint64_t& frameNo,
+        	const uint64_t& address, const bool& readOnly);
 	void fixPageMapStart(const uint64_t& frameNo,
 		const uint64_t& address);
 	void fixBitmap(const uint64_t& frameNo);
@@ -182,7 +184,6 @@ public:
    	uint64_t getNumber() { return processorNumber; }
    	void flushPagesStart();
     	void flushPagesEnd();
-    	void dropPage(const uint64_t& frameNo);
     	void dumpPageFromTLB(const uint64_t& address);
     	const uint64_t& getTicks() const { return totalTicks; }
 	void incrementBlocks();

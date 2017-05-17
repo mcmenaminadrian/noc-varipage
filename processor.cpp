@@ -395,7 +395,7 @@ const pair<const uint64_t, bool> Processor::getFreeFrame()
 			if (flags & COMBOPAGE) {
 				//both pages have to be marked
 				uint32_t oldFlag = masterTile->
-					readWord32(baseofPageTables +
+					readWord32(baseOfPageTables +
 					(i + 1) * PAGETABLEENTRY + FLAGOFFSET);
 				waitATick();
 				if (oldFlag & CLOCKEDIN) {
