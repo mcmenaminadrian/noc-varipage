@@ -492,8 +492,13 @@ void Processor::fixPageMap(const uint64_t& frameNo,
 	waitATick();
 	if (oldFlag & COMBOPAGE) {
 		waitATick();
-		oldFlag = localMemory->readWord32(writeBase + PAGETABLEENTRY +
-			FLAGOFFSET);
+		if (oldFlag & TAILCOMBO) {
+			oldFlag = localMemory->readWord32(writeBase - 
+				PAGETABLEENTRY + FLAGOFFSET);
+		} else {
+			oldFlag = localMemory->readWord32(writeBase + 
+				PAGETABLEENTRY + FLAGOFFSET);
+		}
 		waitATick();
 		localMemory->writeWord32(writeBase + PAGETABLEENTRY
 			+ FLAGOFFSET, oldFlag & 0xCF);
@@ -534,17 +539,6 @@ void Processor::fixComboPageMap(const uint64_t& frameNo,
 	localMemory->writeWord32(writeBase - PAGETABLEENTRY + FLAGOFFSET,
 		oldFlag|COMBOPAGE);
 	waitATick();
-}
-
-//write in initial page of code
-void Processor::fixPageMapStart(const uint64_t& frameNo,
-	const uint64_t& address) 
-{
-	const uint64_t pageAddress = address & pageMask;
-	localMemory->writeLong((1 << pageShift) * KERNELPAGES +
-		frameNo * PAGETABLEENTRY + VOFFSET, pageAddress);
-	localMemory->writeWord32((1 << pageShift) * KERNELPAGES  +
-		frameNo * PAGETABLEENTRY + FLAGOFFSET, 0x0D);
 }
 
 void Processor::fixBitmap(const uint64_t& frameNo)
@@ -1041,18 +1035,6 @@ void Processor::start()
 	//populate page table
 	//mark TLB
 	//mark bitmap
-/*
-	auto tabPages = masterTile->readLong(PAGESLOCAL);
-	auto bitPages = masterTile->readLong(PAGESLOCAL +
-		sizeof(uint64_t));
-
-	uint64_t pagesIn = (2 + tabPages + bitPages);
-
-    	programCounter = pagesIn * (1 << pageShift) + 0x9A0000;
-	fixPageMapStart(pagesIn, programCounter);
-	markBitmapStart(pagesIn, programCounter);
-	fixTLB(pagesIn, programCounter);
-*/
 	switchModeVirtual();
 	ControlThread *pBarrier = masterTile->getBarrier();
 	pBarrier->waitForBegin();
