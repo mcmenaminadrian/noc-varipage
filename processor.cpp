@@ -961,64 +961,6 @@ uint64_t Processor::getStackPointer() const
     return stackPointer;
 }
 
-void Processor::setRegister(const uint64_t& regNumber,
-    const uint64_t& value)
-{
-	//R0 always a zero
-	if (regNumber == 0) {
-		return;
-	} else if (regNumber > REGISTER_FILE_SIZE - 1) {
-		throw "Bad register number";
-	}
-	else {
-		registerFile[regNumber] = value;
-	}
-}
-
-uint64_t Processor::getRegister(const uint64_t& regNumber) const
-{
-	if (regNumber == 0) {
-		return 0;
-	}
-	else if (regNumber > REGISTER_FILE_SIZE - 1) {
-		throw "Bad register number";
-	}
-	else {
-		return registerFile[regNumber];
-	}
-}
-
-uint64_t Processor::multiplyWithCarry(const uint64_t& A,
-    const uint64_t& B)
-{
-	carryBit = false;
-    checkCarryBit();
-	if (A == 0 || B == 0) {
-		return 0;
-	} else {
-		if (A > ULLONG_MAX / B) {
-			carryBit = true;
-            checkCarryBit();
-		}
-		return A * B;
-	}
-}
-
-uint64_t Processor::subtractWithCarry(const uint64_t &A, const uint64_t& B)
-{
-    uint64_t a = A;
-    uint64_t b = B;
-    carryBit = false;
-    if (b > a) {
-        carryBit = true;
-        uint64_t c = b;
-        b = a;
-        a = c;
-    }
-    checkCarryBit();
-    return a - b;
-}
-
 void Processor::checkCarryBit()
 {
     statusWord[1] = carryBit;
