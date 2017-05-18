@@ -862,7 +862,7 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 		if (hardReplace.first) {
 			waitATick();
 			return triggerHardReplace(hardReplace.second, address,
-				readOnly, write);
+				readOnly, true);
 		}
 		waitATick();
 		return triggerHardFault(address, readOnly, true);
