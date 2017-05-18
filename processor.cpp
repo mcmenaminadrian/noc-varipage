@@ -802,57 +802,74 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 
 uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 {
-    const bool readOnly = false;
-    //implement paging logic
-    if (mode == VIRTUAL) {
-        uint64_t pageSought = address & pageMask;
-        uint64_t y = 0;
-        for (auto x: tlbs) {
-            if (get<2>(x) && ((pageSought) == (get<0>(x) & pageMask))) {
-                //entry in TLB - check bitmap
-                for (uint64_t i = 0; i < BITMAPDELAY; i++) {
-                    waitATick();
-                }
-                if (!isBitmapValid(address, get<1>(x))) {
-                    return triggerSmallFault(x, address, true);
-                }
-                return generateAddress(y, address);
-            }
-            y++;
-        }
-        //not in TLB - but check if it is in page table
-        waitATick();
-        for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
-            waitATick();
-            uint64_t addressInPageTable = PAGESLOCAL +
-                        (i * PAGETABLEENTRY) + (1 << pageShift);
-            uint64_t flags = masterTile->readWord32(addressInPageTable
-                        + FLAGOFFSET);
-            if (!(flags & 0x01)) {
-                continue;
-            }
-            waitATick();
-            uint64_t storedPage = masterTile->readLong(
-                        addressInPageTable + VOFFSET);
-            waitATick();
-            if (pageSought == storedPage) {
-                waitATick();
-                flags |= 0x04;
-                masterTile->writeWord32(addressInPageTable + FLAGOFFSET,
-                    flags);
-                waitATick();
-                fixTLB(i, address);
-                waitATick();
-                return fetchAddressRead(address);
-            }
-            waitATick();
-        }
-        waitATick();
-        return triggerHardFault(address, readOnly, true);
-    } else {
-        //what do we do if it's physical address?
-        return address;
-    }
+	const bool readOnly = false;
+	//implement paging logic
+	if (mode == VIRTUAL) {
+		uint64_t pageSought = address & pageMask;
+		uint64_t y = 0;
+		for (auto x: tlbs) {
+			if (get<2>(x) && ((pageSought) ==
+				(get<0>(x) & pageMask))) {
+				//entry in TLB - check bitmap
+				for (uint64_t i = 0; i < BITMAPDELAY; i++) {
+					waitATick();
+				}
+				if (!isBitmapValid(address, get<1>(x))) {
+					return triggerSmallFault(x,
+						address, true);
+				}
+				return generateAddress(y, address);
+			}
+			y++;
+		}
+		//not in TLB - but check if it is in page table
+		waitATick();
+		auto hardReplace = pair<bool, int>(false, -1);
+		waitATick();
+		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
+			waitATick();
+			uint64_t addressInPageTable = PAGESLOCAL +
+				(i * PAGETABLEENTRY) + (1 << pageShift);
+			uint64_t flags = masterTile->readWord32(
+				addressInPageTable + FLAGOFFSET);
+			if (!(flags & 0x01)) {
+				continue;
+			}
+			waitATick(); 
+			uint64_t storedPage = masterTile->readLong(
+			addressInPageTable + VOFFSET);
+			waitATick();
+			if (pageSought == storedPage) {
+				waitATick();
+				flags |= 0x04;
+				masterTile->writeWord32(
+					addressInPageTable + FLAGOFFSET, flags);
+				waitATick();
+				fixTLB(i, address);
+				waitATick();
+				return fetchAddressRead(address);
+            		} else if (!hardReplace.first && pageSought ==
+				storedPage + (1 << pageShift)) {
+				waitATick();
+				hardReplace.first = true;
+				waitATick();
+				hardReplace.second = i;
+				waitATick();
+			}
+			waitATick();
+        	}
+        	waitATick();
+		if (hardReplace.first) {
+			waitATick();
+			return triggerHardReplace(hardReplace.second, address,
+				readOnly, write);
+		}
+		waitATick();
+		return triggerHardFault(address, readOnly, true);
+	} else {
+		//what do we do if it's physical address?
+		return address;
+	}
 }
 
 //function to mimic delay from read of global page tables
