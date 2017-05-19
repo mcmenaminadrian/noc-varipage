@@ -252,7 +252,7 @@ uint64_t Processor::generateAddress(const uint64_t& frame,
 	const uint64_t& address) const
 {
 	uint64_t offset = address & bitMask;
-    return (frame << pageShift) + offset + PAGESLOCAL;
+	return (frame << pageShift) + offset + PAGESLOCAL;
 }
 
 void Processor::interruptBegin()
@@ -293,12 +293,12 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 	//assemble request
 	MemoryPacket memoryRequest(this, remoteAddress,
 		localAddress, size);
-    if (write) {
-        memoryRequest.setWrite();
-    }
+	if (write) {
+		memoryRequest.setWrite();
+	}
 	//wait for response
 	if (masterTile->treeLeaf->acceptPacketUp(memoryRequest)) {
-        masterTile->treeLeaf->routePacket(memoryRequest);
+		masterTile->treeLeaf->routePacket(memoryRequest);
 	} else {
 		cerr << "FAILED" << endl;
 		exit(1);
@@ -315,12 +315,12 @@ void Processor::transferGlobalToLocal(const uint64_t& address,
 	int offset = 0;
 	vector<uint8_t> answer = requestRemoteMemory(size,
 		maskedAddress, get<1>(tlbEntry) +
-        (maskedAddress & bitMask), write);
-		for (auto x: answer) {
-			masterTile->writeByte(get<1>(tlbEntry) + offset + 
-				(maskedAddress & bitMask), x);
-			offset++;
-		}
+		(maskedAddress & bitMask), write);
+	for (auto x: answer) {
+		masterTile->writeByte(get<1>(tlbEntry) + offset + 
+			(maskedAddress & bitMask), x);
+		offset++;
+	}
 }
 
 void Processor::transferLocalToGlobal(const uint64_t& address,
@@ -336,17 +336,17 @@ void Processor::transferLocalToGlobal(const uint64_t& address,
 
 uint64_t Processor::triggerSmallFault(
 	const tuple<uint64_t, uint64_t, bool>& tlbEntry,
-    const uint64_t& address, const bool& write)
+	const uint64_t& address, const bool& write)
 {
-    emit smallFault();
-    smallFaultCount++;
+	emit smallFault();
+	smallFaultCount++;
 	interruptBegin();
-    transferGlobalToLocal(address, tlbEntry, BITMAP_BYTES, write);
+	transferGlobalToLocal(address, tlbEntry, BITMAP_BYTES, write);
 	const uint64_t frameNo =
 		(get<1>(tlbEntry) - PAGESLOCAL) >> pageShift;
-    markBitmap(frameNo, address);
+	markBitmap(frameNo, address);
 	interruptEnd();
-    return generateAddress(frameNo, address);
+	return generateAddress(frameNo, address);
 }
 
 const pair<const uint64_t, bool> Processor::getRandomFrame()
@@ -358,7 +358,6 @@ const pair<const uint64_t, bool> Processor::getRandomFrame()
 	waitATick(); //store
 	return pair<const uint64_t, bool>(randomPage + BASEPAGES, true);
 }
-	
 
 //nominate a frame to be used
 const pair<const uint64_t, bool> Processor::getFreeFrame()
@@ -704,7 +703,7 @@ void Processor::incrementServiceTime()
 
 //when this returns, address guarenteed to be present at returned local address
 uint64_t Processor::fetchAddressRead(const uint64_t& address,
-    const bool& readOnly, const bool& write)
+	const bool& readOnly, const bool& write)
 {
 	//implement paging logic
 	if (mode == VIRTUAL) {
@@ -765,57 +764,64 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 
 uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 {
-    const bool readOnly = false;
-    //implement paging logic
-    if (mode == VIRTUAL) {
-        uint64_t pageSought = address & pageMask;
-        uint64_t y = 0;
-        for (auto x: tlbs) {
-            if (get<2>(x) && ((pageSought) == (get<0>(x) & pageMask))) {
-                //entry in TLB - check bitmap
-                for (uint64_t i = 0; i < BITMAPDELAY; i++) {
-                    waitATick();
-                }
-                if (!isBitmapValid(address, get<1>(x))) {
-                    return triggerSmallFault(x, address, true);
-                }
-                return generateAddress(y, address);
-            }
-            y++;
-        }
-        //not in TLB - but check if it is in page table
-        waitATick();
-        for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
-            waitATick();
-            uint64_t addressInPageTable = PAGESLOCAL +
-                        (i * PAGETABLEENTRY) + (1 << pageShift);
-            uint64_t flags = masterTile->readWord32(addressInPageTable
-                        + FLAGOFFSET);
-            if (!(flags & 0x01)) {
-                continue;
-            }
-            waitATick();
-            uint64_t storedPage = masterTile->readLong(
-                        addressInPageTable + VOFFSET);
-            waitATick();
-            if (pageSought == storedPage) {
-                waitATick();
-                flags |= 0x04;
-                masterTile->writeWord32(addressInPageTable + FLAGOFFSET,
-                    flags);
-                waitATick();
-                fixTLB(i, address);
-                waitATick();
-                return fetchAddressRead(address);
-            }
-            waitATick();
-        }
-        waitATick();
-        return triggerHardFault(address, readOnly, true);
-    } else {
-        //what do we do if it's physical address?
-        return address;
-    }
+	const bool readOnly = false;
+	//implement paging logic
+	if (mode == VIRTUAL) {
+		uint64_t pageSought = address & pageMask;
+		uint64_t y = 0;
+		for (auto x: tlbs) {
+			if (get<2>(x) && ((pageSought) ==
+				(get<0>(x) & pageMask))) {
+				//entry in TLB - check bitmap
+				for (uint64_t i = 0; i < BITMAPDELAY; i++) {
+					waitATick();
+				}
+				if (!isBitmapValid(address, get<1>(x))) {
+					return triggerSmallFault(x, address,
+						true);
+				}
+				return generateAddressWrite(y, address);
+			}
+			y++;
+		}
+		//not in TLB - but check if it is in page table
+		waitATick();
+		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
+			waitATick();
+			uint64_t addressInPageTable = PAGESLOCAL +
+				(i * PAGETABLEENTRY) + (1 << pageShift);
+			uint64_t flags = masterTile->readWord32(addressInPageTable
+				+ FLAGOFFSET);
+			if (!(flags & 0x01)) {
+				continue;
+			}
+			waitATick();
+			uint64_t storedPage = masterTile->readLong(
+				addressInPageTable + VOFFSET);
+			waitATick();
+			if (pageSought == storedPage) {
+				waitATick();
+				flags |= 0x04;
+				//test code
+				if (flags & 0x08) {
+					cout << "WRITE/READ PROBLEM" << endl;
+					throw new bad_exception(); 
+				}
+				masterTile->writeWord32(addressInPageTable +
+					FLAGOFFSET, flags);
+				waitATick();
+				fixTLB(i, address);
+				waitATick();
+				return fetchAddressRead(address, true, true);
+			}
+			waitATick();
+		}
+		waitATick();
+		return triggerHardFault(address, readOnly, true);
+	} else {
+		//what do we do if it's physical address?
+		return address;
+	}
 }
 
 //function to mimic delay from read of global page tables
@@ -829,8 +835,8 @@ void Processor::fetchAddressToRegister()
 void Processor::writeAddress(const uint64_t& address,
 	const uint64_t& value)
 {
-    uint64_t fetchedAddress = fetchAddressWrite(address);
-    masterTile->writeLong(fetchedAddress, value);
+	uint64_t fetchedAddress = fetchAddressWrite(address);
+	masterTile->writeLong(fetchedAddress, value);
 }
 
 void Processor::writeAddress64(const uint64_t& address)
@@ -895,42 +901,6 @@ uint64_t Processor::getRegister(const uint64_t& regNumber) const
 	}
 }
 
-uint64_t Processor::multiplyWithCarry(const uint64_t& A,
-    const uint64_t& B)
-{
-	carryBit = false;
-    checkCarryBit();
-	if (A == 0 || B == 0) {
-		return 0;
-	} else {
-		if (A > ULLONG_MAX / B) {
-			carryBit = true;
-            checkCarryBit();
-		}
-		return A * B;
-	}
-}
-
-uint64_t Processor::subtractWithCarry(const uint64_t &A, const uint64_t& B)
-{
-    uint64_t a = A;
-    uint64_t b = B;
-    carryBit = false;
-    if (b > a) {
-        carryBit = true;
-        uint64_t c = b;
-        b = a;
-        a = c;
-    }
-    checkCarryBit();
-    return a - b;
-}
-
-void Processor::checkCarryBit()
-{
-    statusWord[1] = carryBit;
-}
-
 void Processor::setPCNull()
 {
 	programCounter = 0;
@@ -938,22 +908,6 @@ void Processor::setPCNull()
 
 void Processor::start()
 {
-	//set up initial memory
-	//populate page table
-	//mark TLB
-	//mark bitmap
-/*
-	auto tabPages = masterTile->readLong(PAGESLOCAL);
-	auto bitPages = masterTile->readLong(PAGESLOCAL +
-		sizeof(uint64_t));
-
-	uint64_t pagesIn = (2 + tabPages + bitPages);
-
-    	programCounter = pagesIn * (1 << pageShift) + 0x9A0000;
-	fixPageMapStart(pagesIn, programCounter);
-	markBitmapStart(pagesIn, programCounter);
-	fixTLB(pagesIn, programCounter);
-*/
 	switchModeVirtual();
 	ControlThread *pBarrier = masterTile->getBarrier();
 	pBarrier->waitForBegin();
@@ -964,18 +918,6 @@ void Processor::pcAdvance(const long count)
 	programCounter += count;
 	fetchAddressRead(programCounter, true);
 	waitATick();
-}
-
-bool Processor::tryCheatLock() const
-{
-	ControlThread *pBarrier = masterTile->getBarrier();
-	return pBarrier->tryCheatLock();
-}
-
-void Processor::cheatUnlock() const
-{
-	ControlThread *pBarrier = masterTile->getBarrier();
-	pBarrier->unlockCheatLock();
 }
 
 void Processor::waitATick()
@@ -1023,26 +965,27 @@ void Processor::activateClock()
 		return;
 	}
 	inClock = true;
-    uint64_t pages = TILE_MEM_SIZE >> pageShift;
+	uint64_t pages = TILE_MEM_SIZE >> pageShift;
 	interruptBegin();
-    int wiped = 0;
-    for (uint8_t i = 0; i < pages; i++) {
+	int wiped = 0;
+	for (uint8_t i = 0; i < pages; i++) {
 		waitATick();
-        uint64_t flagAddress = (1 << pageShift) + PAGESLOCAL +
-                ((i + currentTLB) % pagesAvailable) * PAGETABLEENTRY
-                + FLAGOFFSET;
+		uint64_t flagAddress = (1 << pageShift) + PAGESLOCAL +
+			((i + currentTLB) % pagesAvailable) * PAGETABLEENTRY
+			+ FLAGOFFSET;
 		uint32_t flags = masterTile->readWord32(flagAddress);
 		waitATick();
-        if (!(flags & 0x01) || flags & 0x02) {
+		if (!(flags & 0x01) || flags & 0x02) {
 			continue;
 		}
 		flags = flags & (~0x04);
 		waitATick();
 		masterTile->writeWord32(flagAddress, flags);
 		waitATick();
-        get<2>(tlbs[(i + currentTLB) % pagesAvailable]) = false;
-        if (++wiped >= clockWipe)
-            break;
+		get<2>(tlbs[(i + currentTLB) % pagesAvailable]) = false;
+		if (++wiped >= clockWipe){
+			break;
+		}
 	}
 	waitATick();
 	currentTLB = (currentTLB + clockWipe) % pagesAvailable;
@@ -1052,12 +995,12 @@ void Processor::activateClock()
 
 void Processor::dumpPageFromTLB(const uint64_t& address)
 {
-    waitATick();
-    uint64_t pageAddress = address & pageMask;
-    for (auto& x: tlbs) {
-        if (get<0>(x) == pageAddress) {
-            get<2>(x) = false;
-            break;
-        }
-    }
+	waitATick();
+	uint64_t pageAddress = address & pageMask;
+	for (auto& x: tlbs) {
+		if (get<0>(x) == pageAddress) {
+			get<2>(x) = false;
+			break;
+		}
+	}
 }

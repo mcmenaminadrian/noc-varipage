@@ -166,7 +166,7 @@ public:
     	}
     	void setProgramCounter(const uint64_t& address) {
         	programCounter = address;
-        	fetchAddressRead(address);
+        	fetchAddressRead(address, true);
     	}
     	void checkCarryBit();
     	void writeBackMemory(const uint64_t& frameNo);
