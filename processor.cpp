@@ -281,14 +281,11 @@ void Processor::interruptEnd()
 	interruptLock.unlock();
 }
 
-// Maximum flit size 128 bits
-// Maximum packet size 5 flits
-
 //tuple - vector of bytes, size of vector, success
 
 const vector<uint8_t> Processor::requestRemoteMemory(
 	const uint64_t& size, const uint64_t& remoteAddress,
-    const uint64_t& localAddress, const bool& write)
+	const uint64_t& localAddress, const bool& write)
 {
 	//assemble request
 	MemoryPacket memoryRequest(this, remoteAddress,
@@ -308,7 +305,7 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 
 void Processor::transferGlobalToLocal(const uint64_t& address,
 	const tuple<uint64_t, uint64_t, bool>& tlbEntry,
-    const uint64_t& size, const bool& write)
+	const uint64_t& size, const bool& write)
 {
 	//mimic a DMA call - so need to advance PC
 	uint64_t maskedAddress = address & BITMAP_MASK;
@@ -324,14 +321,14 @@ void Processor::transferGlobalToLocal(const uint64_t& address,
 }
 
 void Processor::transferLocalToGlobal(const uint64_t& address,
-    const tuple<uint64_t, uint64_t, bool>& tlbEntry,
-    const uint64_t& size)
+	const tuple<uint64_t, uint64_t, bool>& tlbEntry,
+	const uint64_t& size)
 {
-    //again - this is like a DMA call, there is a delay, but no need
-    //to advance the PC
-    uint64_t maskedAddress = address & BITMAP_MASK;
-    //make the call - ignore the results
-    requestRemoteMemory(size, get<0>(tlbEntry), maskedAddress, true);
+	//again - this is like a DMA call, there is a delay, but no need
+	//to advance the PC
+	uint64_t maskedAddress = address & BITMAP_MASK;
+	//make the call - ignore the results
+	requestRemoteMemory(size, get<0>(tlbEntry), maskedAddress, true);
 }
 
 uint64_t Processor::triggerSmallFault(
@@ -455,6 +452,7 @@ void Processor::writeBackMemory(const uint64_t& frameNo)
 	}
 }
 
+/*
 void Processor::loadMemory(const uint64_t& frameNo,
 	const uint64_t& address)
 {
@@ -469,6 +467,7 @@ void Processor::loadMemory(const uint64_t& frameNo,
 			frameNo * (1 << pageShift) + fetchPortion + i), toGet);
 	}
 }
+*/
 
 void Processor::fixPageMap(const uint64_t& frameNo,
     const uint64_t& address, const bool& readOnly)
@@ -772,15 +771,34 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 		for (auto x: tlbs) {
 			if (get<2>(x) && ((pageSought) ==
 				(get<0>(x) & pageMask))) {
-				//entry in TLB - check bitmap
-				for (uint64_t i = 0; i < BITMAPDELAY; i++) {
-					waitATick();
+				//ensure marked as writable page
+				for (int i = KERNELPAGES;
+					i < TOTAL_LOCAL_PAGES - STACKPAGES;
+					i++) {
+					uint64_t baseAddress = PAGESLOCAL +
+                                                (i * PAGETABLEENTRY) +
+                                                (1 << pageShift) * KERNELPAGES;
+					uint64_t addressPT = masterTile->
+						readLong(baseAddress + VOFFSET);
+					if (addressPT == pageSought) {
+						uint32_t oldFlags = masterTile->
+                                                readWord32(baseAddress
+						+ FLAGOFFSET);
+						if (!oldFlags & 0x08) {
+							waitATick();	
+							oldFlags |= 0x08;
+							masterTile->
+								writeWord32(
+								baseAddress +
+								FLAGOFFSET,
+								oldFlags);
+							waitATick();
+						}
+						break;
+					}
 				}
-				if (!isBitmapValid(address, get<1>(x))) {
-					return triggerSmallFault(x, address,
-						true);
-				}
-				return generateAddressWrite(y, address);
+				return triggerSmallFault(x, address,
+					true);
 			}
 			y++;
 		}
@@ -789,8 +807,9 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
 			waitATick();
 			uint64_t addressInPageTable = PAGESLOCAL +
-				(i * PAGETABLEENTRY) + (1 << pageShift);
-			uint64_t flags = masterTile->readWord32(addressInPageTable
+				(i * PAGETABLEENTRY) +
+				(1 << pageShift) * KERNELPAGES;
+			uint32_t flags = masterTile->readWord32(addressInPageTable
 				+ FLAGOFFSET);
 			if (!(flags & 0x01)) {
 				continue;
@@ -801,12 +820,7 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			waitATick();
 			if (pageSought == storedPage) {
 				waitATick();
-				flags |= 0x04;
-				//test code
-				if (flags & 0x08) {
-					cout << "WRITE/READ PROBLEM" << endl;
-					throw new bad_exception(); 
-				}
+				flags |= 0x0C;
 				masterTile->writeWord32(addressInPageTable +
 					FLAGOFFSET, flags);
 				waitATick();
