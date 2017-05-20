@@ -101,8 +101,6 @@ private:
         	const bool& write);
 	const std::pair<const uint64_t, bool> getRandomFrame();
 	const std::pair<const uint64_t, bool> getFreeFrame();
-	void loadMemory(const uint64_t& frameNo,
-		const uint64_t& address);
 	void fixPageMap(const uint64_t& frameNo,
         const uint64_t& address, const bool& readOnly);
 	void fixPageMapStart(const uint64_t& frameNo,
@@ -184,8 +182,6 @@ public:
     	const uint64_t& getTicks() const { return totalTicks; }
 	void incrementBlocks();
         void incrementServiceTime();
-	bool tryCheatLock() const;
-	void cheatUnlock() const;
         void resetCounters();
     	uint64_t hardFaultCount;
     	uint64_t smallFaultCount;

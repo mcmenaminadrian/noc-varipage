@@ -452,23 +452,6 @@ void Processor::writeBackMemory(const uint64_t& frameNo)
 	}
 }
 
-/*
-void Processor::loadMemory(const uint64_t& frameNo,
-	const uint64_t& address)
-{
-	const uint64_t fetchPortion = (address & bitMask) & BITMAP_MASK;
-	for (unsigned int i = 0; i < BITMAP_BYTES/sizeof(uint64_t); 
-		i+= sizeof(uint64_t)) {
-		waitATick();
-		uint64_t toGet = masterTile->readLong(
-			fetchAddressRead(address + i));
-		waitATick();
-		masterTile->writeLong(fetchAddressWrite(PAGESLOCAL +
-			frameNo * (1 << pageShift) + fetchPortion + i), toGet);
-	}
-}
-*/
-
 void Processor::fixPageMap(const uint64_t& frameNo,
     const uint64_t& address, const bool& readOnly)
 {
@@ -772,33 +755,27 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			if (get<2>(x) && ((pageSought) ==
 				(get<0>(x) & pageMask))) {
 				//ensure marked as writable page
-				for (int i = KERNELPAGES;
-					i < TOTAL_LOCAL_PAGES - STACKPAGES;
-					i++) {
-					uint64_t baseAddress = PAGESLOCAL +
-                                                (i * PAGETABLEENTRY) +
-                                                (1 << pageShift) * KERNELPAGES;
-					uint64_t addressPT = masterTile->
-						readLong(baseAddress + VOFFSET);
-					if (addressPT == pageSought) {
-						uint32_t oldFlags = masterTile->
-                                                readWord32(baseAddress
-						+ FLAGOFFSET);
-						if (!oldFlags & 0x08) {
-							waitATick();	
-							oldFlags |= 0x08;
-							masterTile->
-								writeWord32(
-								baseAddress +
-								FLAGOFFSET,
-								oldFlags);
-							waitATick();
-						}
-						break;
-					}
+				uint64_t baseAddress = PAGESLOCAL +
+					(y * PAGETABLEENTRY) +
+					(1 << pageShift) * KERNELPAGES;
+				uint64_t addressPT = masterTile->
+					readLong(baseAddress + VOFFSET);
+				uint32_t oldFlags = masterTile->
+					readWord32(baseAddress + FLAGOFFSET);
+				if (!oldFlags & 0x08) {
+					waitATick();	
+					masterTile->writeWord32(baseAddress +
+						FLAGOFFSET, oldFlags|0x08);
+					waitATick();
 				}
-				return triggerSmallFault(x, address,
-					true);
+				for (uint64_t i = 0; i < BITMAPDELAY; i++) {
+					waitATick();
+				}
+				if (!isBitmapValid(address, get<1>(x))) {
+					return triggerSmallFault(x, address,
+						true);
+				}
+				return generateAddress(y, address);
 			}
 			y++;
 		}
@@ -820,13 +797,13 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			waitATick();
 			if (pageSought == storedPage) {
 				waitATick();
-				flags |= 0x0C;
+				flags |= 0x04;
 				masterTile->writeWord32(addressInPageTable +
 					FLAGOFFSET, flags);
 				waitATick();
 				fixTLB(i, address);
 				waitATick();
-				return fetchAddressRead(address, true, true);
+				return fetchAddressWrite(address);
 			}
 			waitATick();
 		}
