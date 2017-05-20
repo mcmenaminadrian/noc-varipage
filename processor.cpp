@@ -907,7 +907,7 @@ void Processor::start()
 void Processor::pcAdvance(const long count)
 {
 	programCounter += count;
-	fetchAddressRead(programCounter, true);
+	fetchAddressRead(programCounter);
 	waitATick();
 }
 

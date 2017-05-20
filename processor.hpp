@@ -83,7 +83,7 @@ private:
 		const uint64_t& reqBitmapPages);
 	void zeroOutTLBs(const uint64_t& reqPTEPages);
 	uint64_t fetchAddressRead(const uint64_t& address,
-        const bool& readOnly = false, const bool& write = false);
+		const bool& readOnly = true, const bool& write = false);
     	uint64_t fetchAddressWrite(const uint64_t& address);
 	bool isBitmapValid(const uint64_t& address,
 		const uint64_t& physAddress) const;
