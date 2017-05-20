@@ -671,7 +671,7 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 		(address & bitMask));
 }
 
-uint64_t Processor::triggerHardReplace(const int& frameNo,
+uint64_t Processor::triggerHardReplace(const uint64_t& frameNo,
 	const uint64_t& address, const bool& readOnly,
 	const bool& write)
 {
