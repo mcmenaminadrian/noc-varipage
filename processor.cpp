@@ -646,7 +646,7 @@ const pair<uint64_t, uint8_t>
 }
 
 uint64_t Processor::triggerHardFault(const uint64_t& address,
-    const bool& readOnly, const bool& write)
+	const bool& readOnly, const bool& write)
 {
 	emit hardFault();
 	hardFaultCount++;
@@ -668,6 +668,30 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 	}
 	interruptEnd();
 	return generateAddress(frameData.first, translatedAddress.first +
+		(address & bitMask));
+}
+
+uint64_t Processor::triggerHardReplace(const int& frameNo,
+	const uint64_t& address, const bool& readOnly,
+	const bool& write)
+{
+	emit hardFault();
+	hardFaultCount++;
+	interruptBegin();
+	writeBackMemory(frameNo);
+	fixBitmap(frameNo);
+	pair<uint64_t, uint8_t> translatedAddress = mapToGlobalAddress(address);
+	fixTLB(frameNo, translatedAddress.first);
+	transferGlobalToLocal(translatedAddress.first + (address & bitMask),
+		tlbs[frameNo], BITMAP_BYTES, write);
+	fixPageMap(frameNo, translatedAddress.first, readOnly);
+	markBitmapStart(frameNo, translatedAddress.first +
+		(address & bitMask));
+	for (uint64_t i = 0; i < BITMAPDELAY; i++) {
+		waitATick();
+	}
+	interruptEnd();
+	return generateAddress(frameNo, translatedAddress.first +
 		(address & bitMask));
 }
 
@@ -706,6 +730,8 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 			}
             		y++;
 		}
+		//for hard replace
+		auto hardReplace = pair<bool, int>(false, -1);
 		//not in TLB - but check if it is in page table
 		waitATick(); 
 		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
@@ -733,11 +759,22 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
                 		fixTLB(i, address);
                 		waitATick();
                 		return fetchAddressRead(address);
-            		}
+            		} else if (!hardReplace.first && (pageSought ==
+				storedPage + (1 << pageShift))) {
+				waitATick();
+				hardReplace.first = true;
+				waitATick();
+				hardReplace.second = i;
+			}	
 			waitATick();
         	}
         	waitATick();
-        	return triggerHardFault(address, readOnly, write);
+		if (hardReplace.first) {
+			return triggerHardReplace(hardReplace.second,
+				address, readOnly, write);
+		} else {
+        		return triggerHardFault(address, readOnly, write);
+		}
 	} else {
 		//what do we do if it's physical address?
 		return address;
@@ -779,6 +816,8 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			}
 			y++;
 		}
+		//hard replace code
+		auto hardReplace = pair<bool, int>(false, -1);
 		//not in TLB - but check if it is in page table
 		waitATick();
 		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
@@ -804,11 +843,22 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 				fixTLB(i, address);
 				waitATick();
 				return fetchAddressWrite(address);
+            		} else if (!hardReplace.first && (pageSought ==
+				storedPage + (1 << pageShift))) {
+				waitATick();
+				hardReplace.first = true;
+				waitATick();
+				hardReplace.second = i;
 			}
 			waitATick();
 		}
 		waitATick();
-		return triggerHardFault(address, readOnly, true);
+		if (hardReplace.first) {
+			return triggerHardReplace(hardReplace.second,
+				address, readOnly, true);
+		} else {
+			return triggerHardFault(address, readOnly, true);
+		}
 	} else {
 		//what do we do if it's physical address?
 		return address;
