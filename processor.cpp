@@ -21,10 +21,19 @@
 #include "processor.hpp"
 
 //page table flags
-//bit 0 - 0 for invalid entry, 1 for valid
+//bit 0 - 0 for invalid entry, 1 for valid 
 //bit 1 - 0 for moveable, 1 for fixed
 //bit 2 - 0 for CLOCKed out, 1 for CLOCKed in
 //bit 3 - 0 for read/write, 1 for read only
+//bit 4 - 0 for ordinary page, 1 for combo page
+//bit 5 - 0 for combo low, 1 for combo high
+
+const static uint32_t _VALID_ = 0x01;
+const static uint32_t _FIXED_ = 0x02;
+const static uint32_t _CLOCK_ = 0x04;
+const static uint32_t _READO_ = 0x08;
+const static uint32_t _COMBO_ = 0x10;
+const static uint32_t _CHIGH_ = 0x20;
 
 //TLB model
 //first entry - virtual address 
@@ -44,7 +53,7 @@ const static uint64_t BASEPAGES = 5;	//5 for 512b pages, 3 for 1k pages
 using namespace std;
 
 Processor::Processor(Tile *parent, MainWindow *mW, uint64_t numb):
-    masterTile(parent), mode(REAL), mainWindow(mW)
+	masterTile(parent), mode(REAL), mainWindow(mW)
 {
 	registerFile = vector<uint64_t>(REGISTER_FILE_SIZE, 0);
 	statusWord[0] = true;
@@ -353,6 +362,18 @@ const pair<const uint64_t, bool> Processor::getRandomFrame()
 	//simple ramdom number generator
 	randomPage = (1 * randomPage + 1)%FREEPAGES;
 	waitATick(); //store
+	waitATick(); //read
+	uint32_t flags = masterTile->readWord32((1 << pageShift) * KERNELPAGES
+		+ randomPage * PAGETABLEENTRY + FLAGOFFSET + PAGESLOCAL);
+	waitATick();
+	if (flags & _COMBO_) {
+		waitATick();
+		if (flags & _CHIGH_) {
+			//have to take 'random' page but opt for lower one
+			waitATick();
+			randomPage--;
+		}
+	}
 	return pair<const uint64_t, bool>(randomPage + BASEPAGES, true);
 }
 
@@ -363,17 +384,38 @@ const pair<const uint64_t, bool> Processor::getFreeFrame()
 	//we assume this to be subcycle
 	uint64_t frames = (localMemory->getSize()) >> pageShift;
 	uint64_t couldBe = 0xFFFF;
+	const uint64_t basePageTable = (1 << pageShift) * KERNELPAGES +
+		PAGESLOCAL;
 	for (uint64_t i = 0; i < frames; i++) {
-		uint32_t flags = masterTile->readWord32(
-			(1 << pageShift) * KERNELPAGES
-			+ i * PAGETABLEENTRY + FLAGOFFSET + PAGESLOCAL);
-		if (!(flags & 0x01)) {
+		uint32_t flags = masterTile->readWord32(basePageTable
+			+ i * PAGETABLEENTRY + FLAGOFFSET);
+		if (!(flags & _VALID_)) {
 			return pair<const uint64_t, bool>(i, false);
 		}
-        	if (flags & 0x02) {
+        	if (flags & _FIXED_) {
 			continue;
 		}
-        	else if (!(flags & 0x04)) {
+        	else if (!(flags & _CLOCK_)) {
+			//no longer subcycle - too complex
+			waitATick();
+			if (flags & _COMBO_) {
+				waitATick();
+				uint32_t comboFlags = masterTile->
+					readWord32(basePageTable +
+					(i + 1) * PAGETABLEENTRY + FLAGOFFSET);
+				waitATick();
+				if (comboFlags & _CLOCK) {
+					waitATick();
+					i++;
+					continue;
+				} else {
+					waitATick();
+					couldBe = i;
+					waitATick();
+					i++;
+					continue;
+				}
+			} 
 			couldBe = i;
 		}
 	}
@@ -453,7 +495,7 @@ void Processor::writeBackMemory(const uint64_t& frameNo)
 }
 
 void Processor::fixPageMap(const uint64_t& frameNo,
-    const uint64_t& address, const bool& readOnly)
+	const uint64_t& address, const bool& readOnly)
 {
 	const uint64_t pageAddress = address & pageMask;
 	const uint64_t writeBase =
@@ -466,6 +508,53 @@ void Processor::fixPageMap(const uint64_t& frameNo,
 	} else {
 		localMemory->writeWord32(writeBase + FLAGOFFSET, 0x05);
 	}
+}
+
+void Processor::fixPageMapCombo(const uint64_t& frameNo,
+	const uint64_t& address, const bool& readOnly)
+{
+	const uint64_t pageAddress = address & pageMask;
+	const uint64_t writeBase =
+		KERNELPAGES * (1 << pageShift) + frameNo * PAGETABLEENTRY;
+	waitATick();
+	localMemory->writeLong(writeBase + VOFFSET, pageAddress);
+	waitATick();
+	if (readOnly) {
+		localMemory->writeWord32(writeBase + FLAGOFFSET,
+			_VALID_|_CLOCK_|_COMBO_|_CHIGH_|_READO_);
+		waitATick();
+		localMemory->writeWord32(
+			writeBase + FLAGOFFSET - PAGETABLEENTRY,
+			_VALID_|_CLOCK_|_COMBO_|_READO_);
+	} else {
+		localMemory->writeWord32(writeBase + FLAGOFFSET,
+			_VALID_|_CLOCK_|_COMBO_|CHIGH_);
+		waitATick();
+		localMemory->writeWord32(
+			writeBase + FLAGOFFSET - PAGETABLEENTRY,
+			_VALID_|_CLOCK_|_COMBO_);
+	}
+	
+}
+
+void Processor::cleanPageMapCombo(const uint64_t& frameNo)
+{
+	const uint64_t writeBase = KERNELPAGES * (1 << pageShift) +
+		frameNo * PAGETABLEENTRY;
+	waitATick();
+	uint32_t flags = localMemory->readWord32(writeBase + FLAGOFFSET);
+	waitATick();
+	if (!flags & _COMBO_) {
+		return;
+	}
+	waitATick();
+	flags = localMemory->readWord32(
+		writeBase + PAGETABLEENTRY + FLAGOFFSET);
+	waitATick();
+	flags &= 0xCF;
+	waitATick();
+	localMemory->writeWord32(
+		writeBase + PAGETABLEENTRY + FLAGOFFSET);
 }
 
 //write in initial page of code
@@ -653,6 +742,8 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 	interruptBegin();
 	const pair<const uint64_t, bool> frameData = getFreeFrame();
 	if (frameData.second) {
+		//have to process for combo pages now
+		cleanPageMapCombo(frameData.first);
 		writeBackMemory(frameData.first);
 	}
 	fixBitmap(frameData.first);
@@ -671,20 +762,22 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 		(address & bitMask));
 }
 
-uint64_t Processor::triggerHardReplace(const uint64_t& frameNo,
+uint64_t Processor::triggerComboPageCreate(const uint64_t& frameNo,
 	const uint64_t& address, const bool& readOnly,
 	const bool& write)
 {
 	emit hardFault();
 	hardFaultCount++;
 	interruptBegin();
+	waitATick();
+	frameNo++;
 	writeBackMemory(frameNo);
 	fixBitmap(frameNo);
 	pair<uint64_t, uint8_t> translatedAddress = mapToGlobalAddress(address);
 	fixTLB(frameNo, translatedAddress.first);
 	transferGlobalToLocal(translatedAddress.first + (address & bitMask),
 		tlbs[frameNo], BITMAP_BYTES, write);
-	fixPageMap(frameNo, translatedAddress.first, readOnly);
+	fixPageMapCombo(frameNo, translatedAddress.first, readOnly);
 	markBitmapStart(frameNo, translatedAddress.first +
 		(address & bitMask));
 	for (uint64_t i = 0; i < BITMAPDELAY; i++) {
@@ -730,8 +823,8 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 			}
             		y++;
 		}
-		//for hard replace
-		auto hardReplace = pair<bool, int>(false, -1);
+		//for combopages
+		auto comboPage = pair<bool, int>(false, -1);
 		//not in TLB - but check if it is in page table
 		waitATick(); 
 		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
@@ -739,10 +832,10 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
             		uint64_t addressInPageTable = PAGESLOCAL +
                         	(i * PAGETABLEENTRY) + 
 				(1 << pageShift) * KERNELPAGES;
-            		uint64_t flags =
+            		uint32_t flags =
 				masterTile->readWord32(addressInPageTable
                         	+ FLAGOFFSET);
-            		if (!(flags & 0x01)) {
+            		if (!(flags & _VALID_)) {
                 		continue;
             		}
             		waitATick();
@@ -751,7 +844,26 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
             		waitATick();
             		if (pageSought == storedPage) {
                 		waitATick();
-                		flags |= 0x04;
+                		flags |= _CLOCK_;
+				waitATick();
+				if (flags & _COMBO_) {
+					//must be low
+					waitATick();
+					uint32_t nextFlags = masterTile->
+						readWord32(addressInPageTable +
+						PAGETABLEENTRY + FLAGOFFSET);
+					waitATick();
+					nextFlags |= _CLOCK_;
+					waitATick();
+					masterTile->writeWord32(
+						addressInPageTable +
+						PAGETABLEENTRY + FLAGOFFSET,
+						nextFlags);
+					waitATick();
+					fixTLB(i + 1, pageSought +
+						(1 << pageShift));
+					waitATick();
+				}		
                 		masterTile->writeWord32(
 					addressInPageTable + FLAGOFFSET,
                     			flags);
@@ -759,18 +871,19 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
                 		fixTLB(i, address);
                 		waitATick();
                 		return fetchAddressRead(address);
-            		} else if (!hardReplace.first && (pageSought ==
+            		} else if (i < (TOTAL_LOCAL_PAGES - (STACKPAGES + 1)) &&
+				!comboPage.first && (pageSought ==
 				storedPage + (1 << pageShift))) {
 				waitATick();
-				hardReplace.first = true;
+				comboPage.first = true;
 				waitATick();
-				hardReplace.second = i;
+				comboPage.second = i;
 			}	
 			waitATick();
         	}
         	waitATick();
 		if (hardReplace.first) {
-			return triggerHardReplace(hardReplace.second,
+			return triggerComboPageCreate(comboPage.second,
 				address, readOnly, write);
 		} else {
         		return triggerHardFault(address, readOnly, write);
