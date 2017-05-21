@@ -882,7 +882,7 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 			waitATick();
         	}
         	waitATick();
-		if (hardReplace.first) {
+		if (comboPage.first) {
 			return triggerComboPageCreate(comboPage.second,
 				address, readOnly, write);
 		} else {
@@ -929,8 +929,8 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			}
 			y++;
 		}
-		//hard replace code
-		auto hardReplace = pair<bool, int>(false, -1);
+		//for combopages
+		auto comboPage = pair<bool, int>(false, -1);
 		//not in TLB - but check if it is in page table
 		waitATick();
 		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
@@ -947,31 +947,51 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			uint64_t storedPage = masterTile->readLong(
 				addressInPageTable + VOFFSET);
 			waitATick();
-			if (pageSought == storedPage) {
+            		if (pageSought == storedPage) {
+                		waitATick();
+                		flags |= _CLOCK_;
 				waitATick();
-				flags |= 0x04;
-				masterTile->writeWord32(addressInPageTable +
-					FLAGOFFSET, flags);
-				waitATick();
-				fixTLB(i, address);
-				waitATick();
-				return fetchAddressWrite(address);
-            		} else if (!hardReplace.first && (pageSought ==
+				if (flags & _COMBO_) {
+					//must be low
+					waitATick();
+					uint32_t nextFlags = masterTile->
+						readWord32(addressInPageTable +
+						PAGETABLEENTRY + FLAGOFFSET);
+					waitATick();
+					nextFlags |= _CLOCK_;
+					waitATick();
+					masterTile->writeWord32(
+						addressInPageTable +
+						PAGETABLEENTRY + FLAGOFFSET,
+						nextFlags);
+					waitATick();
+					fixTLB(i + 1, pageSought +
+						(1 << pageShift));
+					waitATick();
+				}		
+                		masterTile->writeWord32(
+					addressInPageTable + FLAGOFFSET,
+                    			flags);
+                		waitATick();
+                		fixTLB(i, address);
+                		waitATick();
+                		return fetchAddressRead(address);
+            		} else if (i < (TOTAL_LOCAL_PAGES - (STACKPAGES + 1)) &&
+				!comboPage.first && (pageSought ==
 				storedPage + (1 << pageShift))) {
 				waitATick();
-				hardReplace.first = true;
+				comboPage.first = true;
 				waitATick();
-				hardReplace.second = i;
-			}
+				comboPage.second = i;
+			}	
 			waitATick();
-		}
-		waitATick();
-		if (hardReplace.first) {
-			return triggerHardReplace(hardReplace.second,
-				address, readOnly, true);
+        	}
+        	waitATick();
+		if (comboPage.first) {
+			return triggerComboPageCreate(comboPage.second,
+				address, readOnly, write);
 		} else {
-			return triggerHardFault(address, readOnly, true);
-		}
+        		return triggerHardFault(address, readOnly, write);
 	} else {
 		//what do we do if it's physical address?
 		return address;
