@@ -98,14 +98,20 @@ private:
 	const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
     		const uint64_t& size, const bool& write);
     	uint64_t triggerHardFault(const uint64_t& address, const bool& readOnly,
-        	const bool& write);
+		const bool& write);
+    	uint64_t triggerComboPageCreate(int& frameNo,
+		const uint64_t& address, const bool& readOnly,
+		const bool& write);
+	void cleanPageMapCombo(const uint64_t& frameNo);
     	uint64_t triggerHardReplace(const uint64_t& frameNo,
 		const uint64_t& address, const bool& readOnly,
         	const bool& write);
 	const std::pair<const uint64_t, bool> getRandomFrame();
 	const std::pair<const uint64_t, bool> getFreeFrame();
 	void fixPageMap(const uint64_t& frameNo,
-        const uint64_t& address, const bool& readOnly);
+		const uint64_t& address, const bool& readOnly);
+	void fixPageMapCombo(const uint64_t& frameNo,
+		const uint64_t& address, const bool& readOnly);
 	void fixPageMapStart(const uint64_t& frameNo,
 		const uint64_t& address);
 	void fixBitmap(const uint64_t& frameNo);

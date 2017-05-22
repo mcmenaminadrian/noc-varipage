@@ -404,7 +404,7 @@ const pair<const uint64_t, bool> Processor::getFreeFrame()
 					readWord32(basePageTable +
 					(i + 1) * PAGETABLEENTRY + FLAGOFFSET);
 				waitATick();
-				if (comboFlags & _CLOCK) {
+				if (comboFlags & _CLOCK_) {
 					waitATick();
 					i++;
 					continue;
@@ -528,7 +528,7 @@ void Processor::fixPageMapCombo(const uint64_t& frameNo,
 			_VALID_|_CLOCK_|_COMBO_|_READO_);
 	} else {
 		localMemory->writeWord32(writeBase + FLAGOFFSET,
-			_VALID_|_CLOCK_|_COMBO_|CHIGH_);
+			_VALID_|_CLOCK_|_COMBO_|_CHIGH_);
 		waitATick();
 		localMemory->writeWord32(
 			writeBase + FLAGOFFSET - PAGETABLEENTRY,
@@ -554,7 +554,7 @@ void Processor::cleanPageMapCombo(const uint64_t& frameNo)
 	flags &= 0xCF;
 	waitATick();
 	localMemory->writeWord32(
-		writeBase + PAGETABLEENTRY + FLAGOFFSET);
+		writeBase + PAGETABLEENTRY + FLAGOFFSET, flags);
 }
 
 //write in initial page of code
@@ -762,7 +762,7 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 		(address & bitMask));
 }
 
-uint64_t Processor::triggerComboPageCreate(const uint64_t& frameNo,
+uint64_t Processor::triggerComboPageCreate(int& frameNo,
 	const uint64_t& address, const bool& readOnly,
 	const bool& write)
 {
@@ -908,8 +908,6 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 				uint64_t baseAddress = PAGESLOCAL +
 					(y * PAGETABLEENTRY) +
 					(1 << pageShift) * KERNELPAGES;
-				uint64_t addressPT = masterTile->
-					readLong(baseAddress + VOFFSET);
 				uint32_t oldFlags = masterTile->
 					readWord32(baseAddress + FLAGOFFSET);
 				if (!oldFlags & 0x08) {
@@ -989,9 +987,10 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
         	waitATick();
 		if (comboPage.first) {
 			return triggerComboPageCreate(comboPage.second,
-				address, readOnly, write);
+				address, readOnly, true);
 		} else {
-        		return triggerHardFault(address, readOnly, write);
+        		return triggerHardFault(address, readOnly, true);
+		}
 	} else {
 		//what do we do if it's physical address?
 		return address;
