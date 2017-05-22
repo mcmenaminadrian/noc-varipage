@@ -366,13 +366,10 @@ const pair<const uint64_t, bool> Processor::getRandomFrame()
 	uint32_t flags = masterTile->readWord32((1 << pageShift) * KERNELPAGES
 		+ randomPage * PAGETABLEENTRY + FLAGOFFSET + PAGESLOCAL);
 	waitATick();
-	if (flags & _COMBO_) {
+	if (flags & _CHIGH_) {
+		//have to take 'random' page but opt for lower one
 		waitATick();
-		if (flags & _CHIGH_) {
-			//have to take 'random' page but opt for lower one
-			waitATick();
-			randomPage--;
-		}
+		randomPage--;
 	}
 	return pair<const uint64_t, bool>(randomPage + BASEPAGES, true);
 }
@@ -544,7 +541,7 @@ void Processor::cleanPageMapCombo(const uint64_t& frameNo)
 	waitATick();
 	uint32_t flags = localMemory->readWord32(writeBase + FLAGOFFSET);
 	waitATick();
-	if (!flags & _COMBO_) {
+	if (!(flags & _COMBO_)) {
 		return;
 	}
 	waitATick();
@@ -910,7 +907,7 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 					(1 << pageShift) * KERNELPAGES;
 				uint32_t oldFlags = masterTile->
 					readWord32(baseAddress + FLAGOFFSET);
-				if (!oldFlags & 0x08) {
+				if (!(oldFlags & 0x08)) {
 					waitATick();	
 					masterTile->writeWord32(baseAddress +
 						FLAGOFFSET, oldFlags|0x08);
