@@ -593,7 +593,7 @@ const static uint64_t DIR_SHIFT = 28;
 const static uint64_t SUPER_TAB_BL = 9;
 const static uint64_t SUPER_TAB_SHIFT = 19;
 const static uint64_t TAB_BL = 19; //10 + 9 for 512 byte pages
-const static uint64_t TAB_SHIFT = 9; //9 for 512, 10 for 1024 pages
+const static uint64_t TAB_SHIFT = 10; //9 for 512, 10 for 1024 pages
 const static uint64_t ADDRESS_SPACE_LEN = 48;
 //below is always called from the interrupt context 
 const pair<uint64_t, uint8_t>
