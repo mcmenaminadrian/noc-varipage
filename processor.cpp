@@ -374,11 +374,16 @@ const pair<const uint64_t, bool> Processor::getFreeFrame()
 			continue;
 		}
         	else if (!(flags & 0x04)) {
-			couldBe = i;
+			if (flags & 0x08){
+				couldBe = i;
+			}
+			else if (couldBe > 0xFF) {
+				couldBe = i|0x100;
+			}
 		}
 	}
 	if (couldBe < 0xFFFF) {
-		return pair<const uint64_t, bool>(couldBe, true);
+		return pair<const uint64_t, bool>(couldBe & 0xFF, true);
 	}
 	//no free frames, so we have to pick one
 	return getRandomFrame();
