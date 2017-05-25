@@ -966,7 +966,8 @@ void Processor::activateClock()
 	int wiped = 0;
 	for (uint8_t i = 0; i < pages; i++) {
 		waitATick();
-		uint64_t flagAddress = (1 << pageShift) + PAGESLOCAL +
+		uint64_t flagAddress = (1 << pageShift) * KERNELPAGES 
+			+ PAGESLOCAL +
 			((i + currentTLB) % pagesAvailable) * PAGETABLEENTRY
 			+ FLAGOFFSET;
 		uint32_t flags = masterTile->readWord32(flagAddress);
