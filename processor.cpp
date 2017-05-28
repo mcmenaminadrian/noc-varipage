@@ -25,6 +25,7 @@
 //bit 1 - 0 for moveable, 1 for fixed
 //bit 2 - 0 for CLOCKed out, 1 for CLOCKed in
 //bit 3 - 0 for read/write, 1 for read only
+//bit 4 - 0 for expellable, 1 for keepable
 
 //TLB model
 //first entry - virtual address 
@@ -373,7 +374,7 @@ const pair<const uint64_t, bool> Processor::getFreeFrame()
         	if (flags & 0x02) {
 			continue;
 		}
-        	else if (!(flags & 0x04)) {
+        	else if (!(flags & 0x10)) {
 			couldBe = i;
 		}
 	}
@@ -462,9 +463,9 @@ void Processor::fixPageMap(const uint64_t& frameNo,
 	localMemory->writeLong(writeBase + VOFFSET, pageAddress);
 	waitATick();
 	if (readOnly) {
-		localMemory->writeWord32(writeBase + FLAGOFFSET, 0x0D);
+		localMemory->writeWord32(writeBase + FLAGOFFSET, 0x1D);
 	} else {
-		localMemory->writeWord32(writeBase + FLAGOFFSET, 0x05);
+		localMemory->writeWord32(writeBase + FLAGOFFSET, 0x15);
 	}
 }
 
@@ -725,7 +726,7 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
             		waitATick();
             		if (pageSought == storedPage) {
                 		waitATick();
-                		flags |= 0x04;
+                		flags |= 0x14;
                 		masterTile->writeWord32(
 					addressInPageTable + FLAGOFFSET,
                     			flags);
@@ -797,7 +798,7 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			waitATick();
 			if (pageSought == storedPage) {
 				waitATick();
-				flags |= 0x04;
+				flags |= 0x14;
 				masterTile->writeWord32(addressInPageTable +
 					FLAGOFFSET, flags);
 				waitATick();
@@ -969,11 +970,19 @@ void Processor::activateClock()
 		if (!(flags & 0x01) || flags & 0x02) {
 			continue;
 		}
-		flags = flags & (~0x04);
 		waitATick();
-		masterTile->writeWord32(flagAddress, flags);
-		waitATick();
-		get<2>(tlbs[(i + currentTLB) % pagesAvailable]) = false;
+		if (flags & 0x04){ 
+			flags = flags & (~0x04);
+			waitATick();
+			masterTile->writeWord32(flagAddress, flags);
+			waitATick();
+			get<2>(tlbs[(i + currentTLB) % pagesAvailable]) = false;
+		} else if (flags & 0x10) {
+			waitATick();
+			flags = flags & (~0x10);
+			waitATick();
+			masterTile->writeWord32(flagAddress, flags);
+		}
 		if (++wiped >= clockWipe){
 			break;
 		}
