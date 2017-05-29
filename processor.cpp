@@ -891,17 +891,9 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 				!comboPage.first && (pageSought ==
 				storedPage + (1 << pageShift))) {
 				waitATick();
-				//only create combo if next page CLOCKed out
-				uint32_t nextFlags = masterTile->readWord32(
-					addressInPageTable + PAGETABLEENTRY +
-					FLAGOFFSET);
+				comboPage.first = true;
 				waitATick();
-				if (!(nextFlags & _CLOCK_)) {
-					waitATick();
-					comboPage.first = true;
-					waitATick();
-					comboPage.second = i;
-				}
+				comboPage.second = i;
 			}	
 			waitATick();
         	}
@@ -1018,17 +1010,9 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 				!comboPage.first && (pageSought ==
 				storedPage + (1 << pageShift))) {
 				waitATick();
-				//only create combo if next page CLOCKed out
-				uint32_t nextFlags = masterTile->readWord32(
-					addressInPageTable + PAGETABLEENTRY +
-					FLAGOFFSET);
+				comboPage.first = true;
 				waitATick();
-				if (!(nextFlags & _CLOCK_)) {
-					waitATick();
-					comboPage.first = true;
-					waitATick();
-					comboPage.second = i;
-				}
+				comboPage.second = i;
 			}	
 			waitATick();
         	}
