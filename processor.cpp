@@ -846,7 +846,7 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
                 		waitATick();
                 		flags |= _CLOCK_;
 				waitATick();
-				if (flags & _COMBO_) {
+				if (flags & _COMBO_ & !(flags & _CHIGH_)) {
 					//must be low
 					waitATick();
 					uint32_t nextFlags = masterTile->
@@ -863,7 +863,23 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 					fixTLB(i + 1, pageSought +
 						(1 << pageShift));
 					waitATick();
-				}		
+				} else if (flags & _COMBO_) {
+					waitATick();
+					uint32_t prevFlags = masterTile->
+						readWord32(addressInPageTable -
+						PAGETABLEENTRY + FLAGOFFSET);
+					waitATick();
+					prevFlags |= _CLOCK_;
+					waitATick();
+					masterTile->writeWord32(
+						addressInPageTable -
+						PAGETABLEENTRY + FLAGOFFSET,
+						prevFlags);
+					waitATick();
+					fixTLB(i - 1, pageSought -
+						(1 << pageShift));
+					waitATick();
+				}
                 		masterTile->writeWord32(
 					addressInPageTable + FLAGOFFSET,
                     			flags);
@@ -957,7 +973,7 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
                 		waitATick();
                 		flags |= _CLOCK_;
 				waitATick();
-				if (flags & _COMBO_) {
+				if (flags & _COMBO_ & !(flags & _CHIGH_)) {
 					//must be low
 					waitATick();
 					uint32_t nextFlags = masterTile->
@@ -974,7 +990,23 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 					fixTLB(i + 1, pageSought +
 						(1 << pageShift));
 					waitATick();
-				}		
+				} else if (flags & _COMBO_) {
+					waitATick();
+					uint32_t prevFlags = masterTile->
+						readWord32(addressInPageTable -
+						PAGETABLEENTRY + FLAGOFFSET);
+					waitATick();
+					prevFlags |= _CLOCK_;
+					waitATick();
+					masterTile->writeWord32(
+						addressInPageTable -
+						PAGETABLEENTRY + FLAGOFFSET,
+						prevFlags);
+					waitATick();
+					fixTLB(i - 1, pageSought -
+						(1 << pageShift));
+					waitATick();
+				}
                 		masterTile->writeWord32(
 					addressInPageTable + FLAGOFFSET,
                     			flags);
