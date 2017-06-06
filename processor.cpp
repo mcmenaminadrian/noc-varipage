@@ -294,6 +294,11 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 		memoryRequest.setWrite();
 	}
 	//wait for response
+	//bus code now
+	if (masterTile->getBarrier()->getBusMaster() & 0x07 !=
+			masterTile->getOrder() & 0x07) {
+		waitATick();
+	}
 	if (masterTile->treeLeaf->acceptPacketUp(memoryRequest)) {
 		masterTile->treeLeaf->routePacket(memoryRequest);
 	} else {
@@ -597,7 +602,7 @@ const static uint64_t TAB_SHIFT = 9; //9 for 512, 10 for 1024 pages
 const static uint64_t ADDRESS_SPACE_LEN = 48;
 //below is always called from the interrupt context 
 const pair<uint64_t, uint8_t>
-    Processor::mapToGlobalAddress(const uint64_t& address)
+	Processor::mapToGlobalAddress(const uint64_t& address)
 {
 	uint64_t globalPagesBase = 0x800;
 	//48 bit addresses

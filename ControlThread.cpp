@@ -11,9 +11,10 @@ using namespace std;
 ControlThread::ControlThread(unsigned long tcks, MainWindow *pWind):
     ticks(tcks), taskCount(0), beginnable(false), mainWindow(pWind)
 {
-    QObject::connect(this, SIGNAL(updateCycles()),
-        pWind, SLOT(updateLCD()));
-    blockedInTree = 0;
+	QObject::connect(this, SIGNAL(updateCycles()),
+		pWind, SLOT(updateLCD()));
+	blockedInTree = 0;
+	busMaster = 0;
 }
 
 void ControlThread::releaseToRun()
@@ -25,10 +26,16 @@ void ControlThread::releaseToRun()
 		taskCountLock.unlock();
 		lck.unlock();
 		run();
+		busMaster = (busMaster + 1)%8;
 		return;
 	}
 	taskCountLock.unlock();
 	go.wait(lck);
+}
+
+const uint8_t ControlThread::getBusMaster() const
+{
+	return busMaster;
 }
 
 void ControlThread::incrementTaskCount()
@@ -42,8 +49,8 @@ void ControlThread::decrementTaskCount()
 	unique_lock<mutex> lck(runLock);
 	unique_lock<mutex> lock(taskCountLock);
 	taskCount--;
-    lock.unlock();
-    lck.unlock();
+	lock.unlock();
+	lck.unlock();
 	if (signedInCount >= taskCount) {
 		run();
 	}

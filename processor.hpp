@@ -73,6 +73,7 @@ private:
 	uint64_t pagesAvailable;
 	uint64_t processorNumber;
 	uint64_t randomPage;
+	uint8_t busMaster;
 	bool inInterrupt;
 	bool inClock;
 	bool clockDue;

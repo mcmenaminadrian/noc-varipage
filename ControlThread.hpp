@@ -21,6 +21,7 @@ private:
 	volatile uint16_t taskCount;
 	volatile uint16_t signedInCount;
 	volatile uint16_t blockedInTree;
+	uint8_t busMaster;
 	std::mutex runLock;
 	bool beginnable;
 	std::condition_variable go;
@@ -40,6 +41,7 @@ public:
 	void waitForBegin();
 	bool tryCheatLock();
 	void unlockCheatLock();
+	const uint8_t getBusMaster() const;
 };
 
 #endif
