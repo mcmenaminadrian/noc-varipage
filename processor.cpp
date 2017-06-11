@@ -295,13 +295,13 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 	}
 	//wait for response
 	//bus code now
-	while (masterTile->treeLeaf->isFree() || (
-		masterTile->getBarrier()->getBusMaster() & !=
+	while (masterTile->treeLeaf->isFree() == false || (
+		masterTile->getBarrier()->getBusMaster() !=
 		masterTile->getOrder())) {
+		incrementBlocks();
 		waitATick();
-	} else {
-		masterTile->treeLeaf->routeDown(memoryRequest);
-	}
+	} 
+	masterTile->treeLeaf->routeDown(memoryRequest);
 	return memoryRequest.getMemory();
 }
 
