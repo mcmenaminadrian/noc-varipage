@@ -19,13 +19,13 @@ private:
 	bool rightBuffer;
 	std::mutex *bottomLeftMutex;
 	std::mutex *bottomRightMutex;
-    std::mutex *mmuMutex;
+	std::mutex *mmuMutex;
         std::unique_lock<std::mutex> mmuLock;
 	void disarmMutex();
-    std::mutex *gateMutex;
-    std::mutex *acceptedMutex;
-    bool gate;
-    uint64_t acceptedPackets;
+	std::mutex *gateMutex;
+	std::mutex *acceptedMutex;
+	bool gate;
+	uint64_t acceptedPackets;
 
 public:
 	Mux* upstreamMux;
@@ -53,7 +53,8 @@ public:
     	bool acceptPacketUp(const MemoryPacket& mPack) const;
 	void postPacketUp(MemoryPacket& packet);
 	void keepRoutingPacket(MemoryPacket& packet);
-    void addMMUMutex();
-
+	void addMMUMutex();
+	const bool isFree();
+	void clearAcceptedMutex();
 };	
 #endif

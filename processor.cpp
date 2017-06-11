@@ -295,15 +295,12 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 	}
 	//wait for response
 	//bus code now
-	if (masterTile->getBarrier()->getBusMaster() & 0x07 !=
-			masterTile->getOrder() & 0x07) {
+	while (masterTile->treeLeaf->isFree() || (
+		masterTile->getBarrier()->getBusMaster() & !=
+		masterTile->getOrder())) {
 		waitATick();
-	}
-	if (masterTile->treeLeaf->acceptPacketUp(memoryRequest)) {
-		masterTile->treeLeaf->routePacket(memoryRequest);
 	} else {
-		cerr << "FAILED" << endl;
-		exit(1);
+		masterTile->treeLeaf->routeDown(memoryRequest);
 	}
 	return memoryRequest.getMemory();
 }

@@ -30,21 +30,21 @@ void Mux::disarmMutex()
 	bottomLeftMutex = nullptr;
 	delete bottomRightMutex;
 	bottomRightMutex = nullptr;
-    delete gateMutex;
-    gateMutex = nullptr;
-    if (mmuMutex) {
-        delete mmuMutex;
-        mmuMutex = nullptr;
-	delete acceptedMutex;
-	acceptedMutex = nullptr;
-    }
+	delete gateMutex;
+	gateMutex = nullptr;
+	if (mmuMutex) {
+		delete mmuMutex;
+		mmuMutex = nullptr;
+		delete acceptedMutex;
+		acceptedMutex = nullptr;
+	}
 }
 
 void Mux::initialiseMutex()
 {
 	bottomLeftMutex = new mutex();
 	bottomRightMutex = new mutex();
-    gateMutex = new mutex();
+	gateMutex = new mutex();
 }
 
 bool Mux::acceptPacketUp(const MemoryPacket& mPack) const
@@ -83,113 +83,52 @@ void Mux::fillBottomBuffer(bool& buffer, mutex *botMutex,
 	}
 }
 
+
+const bool Mux::isFree()
+{
+	acceptedMutex->lock();
+	if (acceptedPackets < 4) {
+		return true;
+	} else {
+		acceptedMutex->unlock();
+		return false;
+	}
+}
+
+void Mux::clearAcceptedMutex()
+{
+	acceptedMutex->unlock();
+}
+
 void Mux::routeDown(MemoryPacket& packet)
 {
-	// - this is the alternating implementation
-	// are we left or right?
-	bool packetOnLeft = false;
-	bool *bufferToUnblock = nullptr;
-	const uint64_t processorIndex = packet.getProcessor()->
-		getTile()->getOrder();
-	if (processorIndex < lowerRight.first) {
-		packetOnLeft = true;
-	}
-	bool bothBuffers = false;
-	while (true) {
-		packet.getProcessor()->waitGlobalTick();
-                acceptedMutex->lock();
-                if (acceptedPackets < 4) {
-	 	    bottomLeftMutex->lock();
-		    bottomRightMutex->lock();
-		    if (leftBuffer && rightBuffer) {
-			bothBuffers = true;
-		    } else {
-			bothBuffers = false;
-		    }
-		    if (!bothBuffers) {
-			if (packetOnLeft) {
-        	    		bufferToUnblock = &leftBuffer;
-				bottomRightMutex->unlock();
-				bottomLeftMutex->unlock();
-				gateMutex->lock();
-                                gate = !gate;
-				gateMutex->unlock();
-				goto fillDDR;
-			} else {
-                		bufferToUnblock = &rightBuffer;
-				bottomRightMutex->unlock();
-				bottomLeftMutex->unlock();
-				gateMutex->lock();
-                                gate = !gate;
-				gateMutex->unlock();
-				goto fillDDR;
-			}
-		    }
-		    else {
-			gateMutex->lock();
-			if (gate) {
-				gateMutex->unlock();
-				//prioritise right
-				if (!packetOnLeft) {
-					bufferToUnblock = &rightBuffer;
-					bottomRightMutex->unlock();
-					bottomLeftMutex->unlock();
-					gateMutex->lock();
-					gate = false;
-					gateMutex->unlock();
-					goto fillDDR;
-				}
-			} else {
-				gateMutex->unlock();
-				if (packetOnLeft) {
-					bufferToUnblock = &leftBuffer;
-					bottomRightMutex->unlock();
-					bottomLeftMutex->unlock();
-					gateMutex->lock();
-					gate = true;
-					gateMutex->unlock();
-					goto fillDDR;
-				}
-			}
-		}
-		bottomRightMutex->unlock();
-		bottomLeftMutex->unlock();
-                }
-                acceptedMutex->unlock();
-		packet.getProcessor()->incrementBlocks();
-	}
 
-fillDDR:
-        bottomLeftMutex->lock();
-        bottomRightMutex->lock();
-        *bufferToUnblock = false;
-        bottomRightMutex->unlock();
-        bottomLeftMutex->unlock();
 	acceptedPackets++;
         acceptedMutex->unlock();
-    uint64_t serviceDelay = MMU_DELAY;
-    if (packet.getWrite()) {
-        serviceDelay *= WRITE_FACTOR;
-    }
-    for (unsigned int i = 0; i < serviceDelay; i++) {
-        packet.getProcessor()->incrementServiceTime();
-        packet.getProcessor()->waitGlobalTick();
-    }
-    acceptedMutex->lock();
-    acceptedPackets--;
-    acceptedMutex->unlock();
-    //cross to tree
+	uint64_t serviceDelay = MMU_DELAY;
+	if (packet.getWrite()) {
+        	serviceDelay *= WRITE_FACTOR;
+    	}
+	for (unsigned int i = 0; i < serviceDelay; i++) {
+		packet.getProcessor()->incrementServiceTime();
+		packet.getProcessor()->waitGlobalTick();
+    	}
+	acceptedMutex->lock();
+	acceptedPackets--;
+	acceptedMutex->unlock();
+	//cross to tree
+	//
 	for (unsigned int i = 0; i < DDR_DELAY; i++) {
 		packet.getProcessor()->waitGlobalTick();
 	}
 	//get memory
-    if (packet.getRequestSize() > 0) {
-        for (unsigned int i = 0; i < packet.getRequestSize(); i++) {
-            packet.fillBuffer(packet.getProcessor()->
-                getTile()->readByte(packet.getRemoteAddress() + i));
-        }
-    }
-    return;
+	if (packet.getRequestSize() > 0) {
+		for (unsigned int i = 0; i < packet.getRequestSize(); i++) {
+			packet.fillBuffer(packet.getProcessor()->
+				getTile()->readByte(packet.getRemoteAddress() + i));
+		}
+	}
+	return;
 }	
 
 void Mux::keepRoutingPacket(MemoryPacket& packet)
