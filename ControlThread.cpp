@@ -33,7 +33,7 @@ void ControlThread::releaseToRun()
 	go.wait(lck);
 }
 
-const uint8_t ControlThread::getBusMaster() const
+ uint8_t ControlThread::getBusMaster() const
 {
 	return busMaster;
 }

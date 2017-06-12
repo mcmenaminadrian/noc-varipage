@@ -5,7 +5,6 @@
 
 const uint64_t PAGE_SHIFT = 9;
 
-class Mux;
 
 class Memory {
 
@@ -13,7 +12,6 @@ private:
 	const uint64_t start;
 	const uint64_t memorySize;
     QMap<uint64_t, uint8_t> contents;
-	Mux* rootMux;
 
 public:
 	Memory(const uint64_t& start, const uint64_t& size);
@@ -23,7 +21,6 @@ public:
 	void writeWord32(const uint64_t& address, const uint32_t& value);
 	void writeByte(const uint64_t& address, const uint8_t& value);
 	void writeLong(const uint64_t& address, const uint64_t& value);
-	void attachTree(Mux* root);
     uint64_t getSize() const;
     bool inRange(const uint64_t& address) const;
 };

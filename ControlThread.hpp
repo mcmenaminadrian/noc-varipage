@@ -41,7 +41,7 @@ public:
 	void waitForBegin();
 	bool tryCheatLock();
 	void unlockCheatLock();
-	const uint8_t getBusMaster() const;
+	uint8_t getBusMaster() const;
 };
 
 #endif

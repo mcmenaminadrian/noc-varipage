@@ -6,6 +6,7 @@
 class Memory;
 class Processor;
 class Noc;
+class Bus;
 
 class Tile
 {

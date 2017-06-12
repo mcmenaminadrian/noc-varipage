@@ -23,12 +23,12 @@ private:
 
 public:
 	Bus(Memory *gMem): globalMemory(gMem) {};
-	~Mux();
+	~Bus();
 	void initialiseMutex();
 	void routeDown(MemoryPacket& packet);
 	void assignGlobalMemory(Memory *gMem){ globalMemory = gMem; }
 	void addMMUMutex();
-	const bool isFree();
+	bool isFree();
 	void clearAcceptedMutex();
 };	
 #endif

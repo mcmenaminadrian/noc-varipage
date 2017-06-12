@@ -41,7 +41,7 @@ void Bus::initialiseMutex()
 	gateMutex = new mutex();
 }
 
-const bool Bus::isFree()
+bool Bus::isFree()
 {
 	acceptedMutex->lock();
 	if (acceptedPackets < 4) {
@@ -87,15 +87,6 @@ void Bus::routeDown(MemoryPacket& packet)
 	}
 	return;
 }	
-
-void Mux::keepRoutingPacket(MemoryPacket& packet)
-{
-	if (upstreamMux == nullptr) {
-		return routeDown(packet);
-	} else {
-		return postPacketUp(packet);
-	}
-}
 
 void Bus::addMMUMutex()
 {
