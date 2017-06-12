@@ -64,7 +64,7 @@ OBJECTS       = main.o \
 		ControlThread.o \
 		memory.o \
 		memorypacket.o \
-		mux.o \
+		bus.o \
 		noc.o \
 		numberpage.o \
 		paging.o \
@@ -190,7 +190,7 @@ qmake:  FORCE
 
 dist: 
 	@$(CHK_DIR_EXISTS) .tmp/noc-qt1.0.0 || $(MKDIR) .tmp/noc-qt1.0.0 
-	$(COPY_FILE) --parents $(SOURCES) $(DIST) .tmp/noc-qt1.0.0/ && $(COPY_FILE) --parents mainwindow.h ControlThread.hpp memory.hpp memorypacket.hpp mux.hpp noc.hpp paging.hpp processor.hpp SAX2Handler.hpp xmlFunctor.hpp tile.hpp tree.hpp .tmp/noc-qt1.0.0/ && $(COPY_FILE) --parents main.cpp mainwindow.cpp ControlThread.cpp memory.cpp memorypacket.cpp mux.cpp noc.cpp numberpage.cpp paging.cpp processor.cpp SAX2Handler.cpp xmlFunctor.cpp tile.cpp tree.cpp .tmp/noc-qt1.0.0/ && $(COPY_FILE) --parents mainwindow.ui .tmp/noc-qt1.0.0/ && (cd `dirname .tmp/noc-qt1.0.0` && $(TAR) noc-qt1.0.0.tar noc-qt1.0.0 && $(COMPRESS) noc-qt1.0.0.tar) && $(MOVE) `dirname .tmp/noc-qt1.0.0`/noc-qt1.0.0.tar.gz . && $(DEL_FILE) -r .tmp/noc-qt1.0.0
+	$(COPY_FILE) --parents $(SOURCES) $(DIST) .tmp/noc-qt1.0.0/ && $(COPY_FILE) --parents mainwindow.h ControlThread.hpp memory.hpp memorypacket.hpp bus.hpp noc.hpp paging.hpp processor.hpp SAX2Handler.hpp xmlFunctor.hpp tile.hpp tree.hpp .tmp/noc-qt1.0.0/ && $(COPY_FILE) --parents main.cpp mainwindow.cpp ControlThread.cpp memory.cpp memorypacket.cpp bus.cpp noc.cpp numberpage.cpp paging.cpp processor.cpp SAX2Handler.cpp xmlFunctor.cpp tile.cpp tree.cpp .tmp/noc-qt1.0.0/ && $(COPY_FILE) --parents mainwindow.ui .tmp/noc-qt1.0.0/ && (cd `dirname .tmp/noc-qt1.0.0` && $(TAR) noc-qt1.0.0.tar noc-qt1.0.0 && $(COMPRESS) noc-qt1.0.0.tar) && $(MOVE) `dirname .tmp/noc-qt1.0.0`/noc-qt1.0.0.tar.gz . && $(DEL_FILE) -r .tmp/noc-qt1.0.0
 
 
 clean:compiler_clean 
@@ -224,7 +224,7 @@ moc_ControlThread.cpp: mainwindow.h \
 moc_processor.cpp: mainwindow.h \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		tile.hpp \
 		memory.hpp \
 		processor.hpp
@@ -260,7 +260,7 @@ mainwindow.o: mainwindow.cpp mainwindow.h \
 		ui_mainwindow.h \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		noc.hpp \
 		tile.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o mainwindow.o mainwindow.cpp
@@ -271,27 +271,27 @@ ControlThread.o: ControlThread.cpp mainwindow.h \
 
 memory.o: memory.cpp tree.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		memory.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o memory.o memory.cpp
 
 memorypacket.o: memorypacket.cpp memorypacket.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o memorypacket.o memorypacket.cpp
 
-mux.o: mux.cpp mainwindow.h \
+bus.o: bus.cpp mainwindow.h \
 		memorypacket.hpp \
 		memory.hpp \
 		ControlThread.hpp \
 		tile.hpp \
 		processor.hpp \
-		mux.hpp
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o mux.o mux.cpp
+		bus.hpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o bus.o bus.cpp
 
 noc.o: noc.cpp mainwindow.h \
 		memory.hpp \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		noc.hpp \
 		tile.hpp \
 		tree.hpp \
@@ -310,14 +310,14 @@ paging.o: paging.cpp memory.hpp \
 processor.o: processor.cpp mainwindow.h \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		tile.hpp \
 		memory.hpp \
 		processor.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o processor.o processor.cpp
 
 SAX2Handler.o: SAX2Handler.cpp memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		ControlThread.hpp \
 		mainwindow.h \
 		tile.hpp \
@@ -330,7 +330,7 @@ SAX2Handler.o: SAX2Handler.cpp memorypacket.hpp \
 xmlFunctor.o: xmlFunctor.cpp mainwindow.h \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		noc.hpp \
 		memory.hpp \
 		tile.hpp \
@@ -342,7 +342,7 @@ xmlFunctor.o: xmlFunctor.cpp mainwindow.h \
 tile.o: tile.cpp mainwindow.h \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		memory.hpp \
 		tile.hpp \
 		processor.hpp \
@@ -352,7 +352,7 @@ tile.o: tile.cpp mainwindow.h \
 tree.o: tree.cpp mainwindow.h \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		memory.hpp \
 		tree.hpp \
 		noc.hpp \

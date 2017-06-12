@@ -15,7 +15,7 @@
 #include "mainwindow.h"
 #include "ControlThread.hpp"
 #include "memorypacket.hpp"
-#include "mux.hpp"
+#include "bus.hpp"
 #include "tile.hpp"
 #include "memory.hpp"
 #include "processor.hpp"
@@ -295,13 +295,13 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 	}
 	//wait for response
 	//bus code now
-	while (masterTile->treeLeaf->isFree() == false || (
+	while (masterTile->bus->isFree() == false || (
 		masterTile->getBarrier()->getBusMaster() !=
 		masterTile->getOrder())) {
 		incrementBlocks();
 		waitATick();
 	} 
-	masterTile->treeLeaf->routeDown(memoryRequest);
+	masterTile->bus->routeDown(memoryRequest);
 	return memoryRequest.getMemory();
 }
 

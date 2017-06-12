@@ -7,7 +7,7 @@
 #include "ui_mainwindow.h"
 #include "ControlThread.hpp"
 #include "memorypacket.hpp"
-#include "mux.hpp"
+//#include "mux.hpp"
 #include "noc.hpp"
 #include "tile.hpp"
 

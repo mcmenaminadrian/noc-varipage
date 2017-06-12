@@ -12,7 +12,7 @@
 #include "ControlThread.hpp"
 #include "tile.hpp"
 #include "processor.hpp"
-#include "mux.hpp"
+#include "bus.hpp"
 
 using namespace std;
 

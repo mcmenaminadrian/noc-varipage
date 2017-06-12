@@ -20,7 +20,7 @@
 #include "ControlThread.hpp"
 #include "memorypacket.hpp"
 #include "mux.hpp"
-#include "noc.hpp"
+//#include "noc.hpp"
 #include "tile.hpp"
 #include "tree.hpp"
 #include "processor.hpp"

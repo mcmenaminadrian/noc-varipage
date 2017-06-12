@@ -10,7 +10,7 @@
 #include "mainwindow.h"
 #include "ControlThread.hpp"
 #include "memorypacket.hpp"
-#include "mux.hpp"
+#include "bus.hpp"
 #include "memory.hpp"
 #include "tile.hpp"
 #include "processor.hpp"
@@ -41,9 +41,9 @@ void Tile::addConnection(const long col, const long row)
 	connections.push_back(pair<long, long>(col, row));
 }
 
-void Tile::addTreeLeaf(Mux *leaf)
+void Tile::addBus(Bus *connection)
 {
-	treeLeaf = leaf;
+	bus = connection;
 }
 
 unsigned long Tile::getOrder() const
