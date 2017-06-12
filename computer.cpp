@@ -8,7 +8,6 @@
 #include <condition_variable>
 #include <bitset>
 #include "memorypacket.hpp"
-#include "mux.hpp"
 #include "memory.hpp"
 #include "ControlThread.hpp"
 #include "noc.hpp"

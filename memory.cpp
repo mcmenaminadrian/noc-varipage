@@ -7,7 +7,6 @@
 #include <mutex>
 #include "tree.hpp"
 #include "memorypacket.hpp"
-#include "mux.hpp"
 #include "memory.hpp"
 
 using namespace std;

@@ -10,7 +10,6 @@
 #include "mux.hpp"
 #include "memory.hpp"
 #include "tree.hpp"
-#include "noc.hpp"
 #include "tile.hpp"
 #include "processor.hpp"
 
