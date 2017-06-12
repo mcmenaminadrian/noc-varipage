@@ -48,7 +48,7 @@ SOURCES       = main.cpp \
 		ControlThread.cpp \
 		memory.cpp \
 		memorypacket.cpp \
-		mux.cpp \
+		bus.cpp \
 		noc.cpp \
 		numberpage.cpp \
 		paging.cpp \

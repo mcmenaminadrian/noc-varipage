@@ -19,9 +19,10 @@ using namespace std;
 
 Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
 {
+/*
 	long totalLeaves = columns * rows;
 	levels = 0;
-	long muxCount = totalLeaves / 2;
+	long muxCount = 1;
 
 	//create the nodes
 	while (muxCount > 1) {
@@ -46,11 +47,13 @@ Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
 		targetTile->addTreeLeaf(&(nodesTree[0][i]));
 		targetTile2->addTreeLeaf(&(nodesTree[0][i]));
 	}
+*/
 	//root Mux - connects to global memory
 	nodesTree.push_back(vector<Mux>(1));
 	nodesTree[levels][0].assignGlobalMemory(&globalMemory);
 	nodesTree[levels][0].upstreamMux = nullptr;
 	nodesTree[levels][0].addMMUMutex();
+/*
 	for (int i = 0; i <= levels; i++) {
 		for (unsigned int j = 0; j < nodesTree[i].size(); j++) {
 			if (i > 0) {
@@ -79,7 +82,7 @@ Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
 			nodesTree[i][j].initialiseMutex();
 		}
 	}
-
+*/
 	//attach root to global memory
 	globalMemory.attachTree(&(nodesTree.at(nodesTree.size() - 1)[0]));
 }
