@@ -19,6 +19,7 @@
 #include "memory.hpp"
 #include "ControlThread.hpp"
 #include "memorypacket.hpp"
+#include "bus.hpp"
 #include "noc.hpp"
 #include "tile.hpp"
 #include "processor.hpp"
@@ -37,12 +38,17 @@ Noc::Noc(const long columns, const long rows, const long pageShift,
     columnCount(columns), rowCount(rows),
     blockSize(bSize), mainWindow(pWind), memoryBlocks(blocks)
 {
-    uint64_t number = 0;
-    for (int i = 0; i < columns; i++) {
+
+	memoryBus = new Bus();
+	memoryBus->addMMUMutex();
+	uint64_t number = 0;
+	for (int i = 0; i < columns; i++) {
 		tiles.push_back(vector<Tile *>(rows));
 		for (int j = 0; j < rows; j++) {
     		        tiles[i][j] = new Tile(
 				this, i, j, pageShift, mainWindow, number++);
+			tiles[i][j]->addBus(memoryBus);
+			
 		}
 	}
 	//construct non-memory network
@@ -82,6 +88,7 @@ Noc::~Noc()
 			delete toGo;
 		}
 	}
+	delete memoryBus;
 }
 
 Tile* Noc::tileAt(long i)

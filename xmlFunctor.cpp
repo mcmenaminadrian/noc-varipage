@@ -16,6 +16,7 @@
 #include "mainwindow.h"
 #include "ControlThread.hpp"
 #include "memorypacket.hpp"
+#include "bus.hpp"
 #include "noc.hpp"
 #include "memory.hpp"
 #include "tile.hpp"

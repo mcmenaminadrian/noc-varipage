@@ -12,7 +12,6 @@ class Memory;
 
 class Bus {
 private:
-	Memory* globalMemory;
 	std::mutex *mmuMutex;
         std::unique_lock<std::mutex> mmuLock;
 	void disarmMutex();
@@ -22,11 +21,10 @@ private:
 	uint64_t acceptedPackets;
 
 public:
-	Bus(Memory *gMem): globalMemory(gMem) {};
+	Bus(){};
 	~Bus();
 	void initialiseMutex();
 	void routeDown(MemoryPacket& packet);
-	void assignGlobalMemory(Memory *gMem){ globalMemory = gMem; }
 	void addMMUMutex();
 	bool isFree();
 	void clearAcceptedMutex();
