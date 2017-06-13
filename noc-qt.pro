@@ -28,7 +28,6 @@ SOURCES += main.cpp\
     SAX2Handler.cpp \
     xmlFunctor.cpp \
     tile.cpp \
-    tree.cpp
 
 HEADERS  += mainwindow.h \
     ControlThread.hpp \
@@ -41,7 +40,6 @@ HEADERS  += mainwindow.h \
     SAX2Handler.hpp \
     xmlFunctor.hpp \
     tile.hpp \
-    tree.hpp
 
 FORMS    += mainwindow.ui
 
