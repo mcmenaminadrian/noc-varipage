@@ -16,7 +16,6 @@
 #include "mainwindow.h"
 #include "ControlThread.hpp"
 #include "memorypacket.hpp"
-#include "mux.hpp"
 #include "noc.hpp"
 #include "memory.hpp"
 #include "tile.hpp"

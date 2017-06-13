@@ -21,7 +21,6 @@
 #include "memorypacket.hpp"
 #include "noc.hpp"
 #include "tile.hpp"
-#include "tree.hpp"
 #include "processor.hpp"
 #include "paging.hpp"
 #include "xmlFunctor.hpp"
@@ -72,8 +71,6 @@ Noc::Noc(const long columns, const long rows, const long pageShift,
         cerr << "Failed to initialise XML Parser" << endl;
     }
 
-	//in reality we are only using one tree and one memory block
-	trees.push_back(new Tree(globalMemory[0], *this, columns, rows));
 	pBarrier = nullptr;
 }
 
@@ -84,10 +81,6 @@ Noc::~Noc()
 			Tile* toGo = tiles[i][j];
 			delete toGo;
 		}
-	}
-
-	for (int i = 0; i < memoryBlocks; i++) {
-		delete trees[i];
 	}
 }
 
