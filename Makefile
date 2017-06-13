@@ -16,7 +16,7 @@ CXXFLAGS      = -m64 -pipe -std=c++11 -g -O0 -O2 -Wall -W -D_REENTRANT $(DEFINES
 INCPATH       = -I/usr/share/qt4/mkspecs/linux-g++-64 -I. -I/usr/include/qt4/QtCore -I/usr/include/qt4/QtGui -I/usr/include/qt4 -I/usr/local/include -I/usr/local/include -I. -I. -I/home/adrian/local/include
 LINK          = g++
 LFLAGS        = -m64 -Wl,-O1
-LIBS          = $(SUBLIBS)  -L/usr/lib/x86_64-linux-gnu -lQtGui -lQtCore -lpthread 
+LIBS          = $(SUBLIBS)  -L/usr/lib/x86_64-linux-gnu -lQtGui -lQtCore -lpthread -L/home/adrian/local/lib -lxerces-c 
 AR            = ar cqs
 RANLIB        = 
 QMAKE         = /usr/bin/qmake
