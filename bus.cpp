@@ -18,6 +18,10 @@ using namespace std;
 
 #define WRITE_FACTOR 2
 
+Bus::Bus()
+{
+	acceptedPackets = 0;
+}
 
 Bus::~Bus()
 {

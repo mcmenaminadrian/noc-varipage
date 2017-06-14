@@ -21,7 +21,7 @@ private:
 	uint64_t acceptedPackets;
 
 public:
-	Bus(){};
+	Bus();
 	~Bus();
 	void initialiseMutex();
 	void routeDown(MemoryPacket& packet);

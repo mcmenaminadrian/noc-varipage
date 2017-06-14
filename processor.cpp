@@ -295,14 +295,22 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 	}
 	//wait for response
 	//bus code now
-	while (masterTile->bus->isFree() == false || (
-		masterTile->getBarrier()->getBusMaster() !=
-		masterTile->getOrder())) {
+	uint16_t backOff = 1;
+check_status:
+	for (uint16_t i = 0; i < backOff; i++)
+	{
 		incrementBlocks();
 		waitATick();
-	} 
-	masterTile->bus->routeDown(memoryRequest);
-	return memoryRequest.getMemory();
+	}
+	if (masterTile->bus->isFree()) { 
+		masterTile->bus->routeDown(memoryRequest);
+		return memoryRequest.getMemory();
+	} else {
+		backOff = (backOff * 2) % 0x100;
+		incrementBlocks();
+		waitATick();
+		goto check_status;
+	}
 }
 
 void Processor::transferGlobalToLocal(const uint64_t& address,
