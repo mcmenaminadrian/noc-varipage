@@ -80,6 +80,11 @@ backing_off:
 
 	acceptedPackets++;
         acceptedMutex->unlock();
+	packet.getProcessor()->incrementBlocks();
+	packet.getProcessor()->waitATick();
+	gateMutex->lock();
+	waiting = false;
+	gateMutex->unlock(); 
 	uint64_t serviceDelay = MMU_DELAY;
 	if (packet.getWrite()) {
         	serviceDelay *= WRITE_FACTOR;
