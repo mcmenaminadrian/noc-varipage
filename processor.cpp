@@ -295,9 +295,9 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 	}
 	//wait for response
 	//bus code now
-	uint16_t backOff = 1;
+	uint16_t backOff = 0;
 check_status:
-	for (uint16_t i = 0; i < backOff; i++)
+	for (uint16_t i = 0; i < (1 << backOff); i++)
 	{
 		incrementBlocks();
 		waitATick();
@@ -306,7 +306,7 @@ check_status:
 		masterTile->bus->routeDown(memoryRequest);
 		return memoryRequest.getMemory();
 	} else {
-		backOff = (backOff * 2) % 0x100;
+		backOff = (backOff + 1)%10;
 		incrementBlocks();
 		waitATick();
 		goto check_status;
