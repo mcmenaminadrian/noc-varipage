@@ -38,17 +38,16 @@ Noc::Noc(const long columns, const long rows, const long pageShift,
     columnCount(columns), rowCount(rows),
     blockSize(bSize), mainWindow(pWind), memoryBlocks(blocks)
 {
-
-	memoryBus = new Bus();
-	memoryBus->addMMUMutex();
+	mutex *accMutex = new mutex();
 	uint64_t number = 0;
 	for (int i = 0; i < columns; i++) {
+		Bus *nextBus = new Bus();
+		nextBus->addMMUMutex(accMutex);
 		tiles.push_back(vector<Tile *>(rows));
 		for (int j = 0; j < rows; j++) {
     		        tiles[i][j] = new Tile(
 				this, i, j, pageShift, mainWindow, number++);
 			tiles[i][j]->addBus(memoryBus);
-			
 		}
 	}
 	//construct non-memory network
@@ -96,8 +95,8 @@ Tile* Noc::tileAt(long i)
 	if (i >= columnCount * rowCount || i < 0){
 		return NULL;
 	}
-    long columnAccessed = i%columnCount;
-    long rowAccessed = i/columnCount;
+	long columnAccessed = i%columnCount;
+	long rowAccessed = i/columnCount;
 	return tiles[columnAccessed][rowAccessed];
 }
 

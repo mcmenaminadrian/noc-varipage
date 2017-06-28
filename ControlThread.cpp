@@ -26,7 +26,7 @@ void ControlThread::releaseToRun()
 		taskCountLock.unlock();
 		lck.unlock();
 		run();
-		busMaster = (busMaster + 1)%128;
+		busMaster = (busMaster + 1)%8;
 		return;
 	}
 	taskCountLock.unlock();

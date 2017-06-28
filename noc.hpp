@@ -28,7 +28,7 @@ private:
 public:
 	std::vector<Memory>& getGlobal() { return globalMemory;}
 	const long memoryBlocks;
-	Bus* memoryBus;
+	std::vector<Bus *> memoryBuses;
 	Noc(const long columns, const long rows, const long pageShift,
 		const uint64_t bSize, MainWindow *pWind, const long memBlocks);
 	~Noc();

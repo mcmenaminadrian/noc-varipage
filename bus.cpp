@@ -21,6 +21,10 @@ using namespace std;
 Bus::Bus()
 {
 	acceptedPackets = 0;
+	initialiseMutex();
+	gateMutex.lock();
+	waiting = false;
+	gateMutex.unlock();
 }
 
 Bus::~Bus()
@@ -36,7 +40,6 @@ void Bus::disarmMutex()
 		delete mmuMutex;
 		mmuMutex = nullptr;
 		delete acceptedMutex;
-		acceptedMutex = nullptr;
 	}
 }
 
@@ -47,22 +50,32 @@ void Bus::initialiseMutex()
 
 bool Bus::isFree()
 {
-	acceptedMutex->lock();
-	if (acceptedPackets < 4) {
+	gateMutex.lock();
+	if (waiting == false) {
+		waiting = true;
+		gateMutex.unlock();
 		return true;
 	} else {
-		acceptedMutex->unlock();
+		gateMutex.unlock();
 		return false;
 	}
 }
 
-void Bus::clearAcceptedMutex()
-{
-	acceptedMutex->unlock();
-}
-
 void Bus::routeDown(MemoryPacket& packet)
 {
+	//we have a packet locally, but can we enter MMU?
+	uint16_t backOff = 1;
+backing_off:
+	for (uint16_t i = 0; i < backOff; i++) {
+		incrementBlocks();
+		waitATick();
+	}
+	acceptedMutex->lock();
+	if (acceptedPackets >= 4) {
+		acceptedMutex->unlock();
+		backOff = (backOff * 2)%0x100;
+		goto backing_off;
+	} 
 
 	acceptedPackets++;
         acceptedMutex->unlock();
@@ -92,10 +105,7 @@ void Bus::routeDown(MemoryPacket& packet)
 	return;
 }	
 
-void Bus::addMMUMutex()
+void Bus::addMMUMutex(mutex *accMutex)
 {
-    mmuMutex = new mutex();
-    acceptedMutex = new mutex();
-    mmuLock =  unique_lock<mutex>(*mmuMutex);
-    mmuLock.unlock();
+    acceptedMutex = accMutex;
 }
