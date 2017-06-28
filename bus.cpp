@@ -65,16 +65,18 @@ bool Bus::isFree()
 void Bus::routeDown(MemoryPacket& packet)
 {
 	//we have a packet locally, but can we enter MMU?
-	uint16_t backOff = 1;
+	uint16_t backOff = 0;
 backing_off:
-	for (uint16_t i = 0; i < backOff; i++) {
+	for (uint16_t i = 0; i < (1 << backOff); i++) {
 		packet.getProcessor()->incrementBlocks();
 		packet.getProcessor()->waitATick();
 	}
 	acceptedMutex->lock();
 	if (acceptedPackets >= 4) {
 		acceptedMutex->unlock();
-		backOff = (backOff * 2)%0x100;
+		backOff = (backOff++)%10;
+		packet.getProcessor()->incrementBlocks();
+		packet.getProcessor()->waitATick();
 		goto backing_off;
 	} 
 
