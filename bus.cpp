@@ -18,13 +18,14 @@ using namespace std;
 
 #define WRITE_FACTOR 2
 
+uint64_t Bus::acceptedPackets = 0;
+
 Bus::Bus()
 {
-	acceptedPackets = 0;
 	initialiseMutex();
-	gateMutex.lock();
+	gateMutex->lock();
 	waiting = false;
-	gateMutex.unlock();
+	gateMutex->unlock();
 }
 
 Bus::~Bus()
@@ -50,13 +51,13 @@ void Bus::initialiseMutex()
 
 bool Bus::isFree()
 {
-	gateMutex.lock();
+	gateMutex->lock();
 	if (waiting == false) {
 		waiting = true;
-		gateMutex.unlock();
+		gateMutex->unlock();
 		return true;
 	} else {
-		gateMutex.unlock();
+		gateMutex->unlock();
 		return false;
 	}
 }
@@ -67,8 +68,8 @@ void Bus::routeDown(MemoryPacket& packet)
 	uint16_t backOff = 1;
 backing_off:
 	for (uint16_t i = 0; i < backOff; i++) {
-		incrementBlocks();
-		waitATick();
+		packet.getProcessor()->incrementBlocks();
+		packet.getProcessor()->waitATick();
 	}
 	acceptedMutex->lock();
 	if (acceptedPackets >= 4) {

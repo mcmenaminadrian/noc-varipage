@@ -18,6 +18,7 @@ private:
 	std::mutex *gateMutex;
 	std::mutex *acceptedMutex;
 	bool gate;
+	bool waiting;
 	static uint64_t acceptedPackets;
 
 public:
@@ -25,7 +26,7 @@ public:
 	~Bus();
 	void initialiseMutex();
 	void routeDown(MemoryPacket& packet);
-	void addMMUMutex();
+	void addMMUMutex(std::mutex *muIn);
 	bool isFree();
 };	
 #endif

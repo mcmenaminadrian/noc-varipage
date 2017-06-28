@@ -47,7 +47,7 @@ Noc::Noc(const long columns, const long rows, const long pageShift,
 		for (int j = 0; j < rows; j++) {
     		        tiles[i][j] = new Tile(
 				this, i, j, pageShift, mainWindow, number++);
-			tiles[i][j]->addBus(memoryBus);
+			tiles[i][j]->addBus(nextBus);
 		}
 	}
 	//construct non-memory network
@@ -87,7 +87,6 @@ Noc::~Noc()
 			delete toGo;
 		}
 	}
-	delete memoryBus;
 }
 
 Tile* Noc::tileAt(long i)
