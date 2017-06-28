@@ -74,7 +74,7 @@ backing_off:
 	acceptedMutex->lock();
 	if (acceptedPackets >= 4) {
 		acceptedMutex->unlock();
-		backOff = (backOff++)%10;
+		backOff = (backOff + 1)%10;
 		packet.getProcessor()->incrementBlocks();
 		packet.getProcessor()->waitATick();
 		goto backing_off;
