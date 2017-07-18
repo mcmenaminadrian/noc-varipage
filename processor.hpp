@@ -25,12 +25,14 @@
 
 //Page table entries - physical addr, virtual addr, frame no, flags
 
-#define PAGETABLEENTRY (8 + 8 + 8 + 4)
+#define PAGETABLEENTRY (8 + 8 + 8 + 4 + 8)
 #define VOFFSET 0
 #define POFFSET 8
 #define FRAMEOFFSET 16
 #define FLAGOFFSET 24
-#define ENDOFFSET 28
+#define CLOCKOFFSET 28
+#define ENDOFFSET 36
+
 
 static const uint64_t REGISTER_FILE_SIZE = 32;
 static const uint64_t BITMAP_BYTES = 16;
@@ -49,13 +51,11 @@ class Processor: public QObject {
 
 signals:
     void hardFault();
-    void smallFault();
 
 private:
 	std::mutex interruptLock;
 	std::mutex waitMutex;
 	std::vector<uint64_t> registerFile;
-	std::vector<std::tuple<uint64_t, uint64_t, bool>> tlbs;
 	bool carryBit;
 	uint64_t programCounter;
 	Tile *masterTile;
@@ -81,7 +81,6 @@ private:
 	void writeOutBasicPageEntries(const uint64_t& reqPTEPages);
 	void writeOutPageAndBitmapLengths(const uint64_t& reqPTESize,
 		const uint64_t& reqBitmapPages);
-	void zeroOutTLBs(const uint64_t& reqPTEPages);
 	uint64_t fetchAddressRead(const uint64_t& address,
 		const bool& readOnly = true, const bool& write = false);
     	uint64_t fetchAddressWrite(const uint64_t& address);
@@ -89,9 +88,6 @@ private:
 		const uint64_t& physAddress) const;
 	uint64_t generateAddress(const uint64_t& frame,
 	const uint64_t& address) const;
-    	uint64_t triggerSmallFault(
-        const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
-        	const uint64_t& address, const bool& write);
 	void interruptBegin();
 	void interruptEnd();
 	void transferGlobalToLocal(const uint64_t& address,
@@ -104,15 +100,6 @@ private:
 	void fixPageMap(const uint64_t& frameNo,
         const uint64_t& address, const bool& readOnly);
 	void fixPageMapStart(const uint64_t& frameNo,
-		const uint64_t& address);
-	void fixBitmap(const uint64_t& frameNo);
-	void markBitmapStart(const uint64_t& frameNo,
-		const uint64_t& address);
-	void markBitmapInit(const uint64_t& frameNo,
-        	const uint64_t& address);
-	void markBitmap(const uint64_t& frameNo,
-        	const uint64_t& address);
-	void fixTLB(const uint64_t& frameNo,
 		const uint64_t& address);
 	const std::vector<uint8_t>
 		requestRemoteMemory(
@@ -184,7 +171,6 @@ public:
         void incrementServiceTime();
         void resetCounters();
     	uint64_t hardFaultCount;
-    	uint64_t smallFaultCount;
     	uint64_t blocks;
     	uint64_t serviceTime;
 };
