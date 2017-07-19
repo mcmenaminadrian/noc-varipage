@@ -52,6 +52,7 @@ Processor::Processor(Tile *parent, MainWindow *mW, uint64_t numb):
 	registerFile = vector<uint64_t>(REGISTER_FILE_SIZE, 0);
 	statusWord[0] = true;
 	totalTicks = 1;
+	uninterruptedTicks = 1;
 	hardFaultCount = 0;
     	blocks = 0;
 	inInterrupt = false;
@@ -508,7 +509,7 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
                     			flags);
                 		waitATick();
 				masterTile->writeLong(addressInPageTable +
-					CLOCKOFFSET, totalTicks); 
+					CLOCKOFFSET, uninterruptedTicks); 
                 		waitATick();
                 		return generateAddress(i, address);
             		}
@@ -694,8 +695,11 @@ void Processor::waitATick()
 	ControlThread *pBarrier = masterTile->getBarrier();
 	pBarrier->releaseToRun();
 	totalTicks++;
-	if (totalTicks%clockTicks == 0) {
-		clockDue = true;
+	if (!inInterrupt) {
+		uninterruptedTicks++;
+		if (uninterruptedTicks%clockTicks == 0) {
+			clockDue = true;
+		}
 	}	
 	if (clockDue && inClock == false) {
 		clockDue = false;
@@ -730,21 +734,23 @@ void Processor::popStackPointer()
 
 void Processor::activateClock()
 {
+	//WS window 10 times bigger than clock sweep
 	if (inInterrupt) {
 		return;
 	}
 	inClock = true;
-	uint64_t pages = TILE_MEM_SIZE >> pageShift;
 	interruptBegin();
-	int wiped = 0;
-	for (uint8_t i = 0; i < pages; i++) {
+	uint64_t cutoffTime = uniterruptedTicks - (clockTicks * 10);
+	for (uint8_t i = 0; i < CACHES_AVAILABLE; i++) {
 		waitATick();
-		uint64_t flagAddress = (1 << pageShift) * KERNELPAGES 
+		uint64_t flagAddress = COREOFFSET 
 			+ PAGESLOCAL + FLAGOFFSET +
-			((i + currentTLB) % pagesAvailable) * PAGETABLEENTRY;
-		uint32_t flags = masterTile->readWord32(flagAddress);
+			i * PAGETABLEENTRY;
+		uint64_t clockAddress = COREOFFSET + PAGESLOCAL +
+			CLOCKOFFSET + i * PAGETABLEENTRY;
+		uint64_t clockWas = masterTile->readLong(clockAddress);
 		waitATick();
-		if (!(flags & 0x01) || flags & 0x02) {
+		if (!(flags & 0x01) || !(flags & 0x04)) {
 			continue;
 		}
 		flags = flags & (~0x04);
