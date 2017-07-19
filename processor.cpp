@@ -42,6 +42,7 @@ const static uint64_t FREEPAGES = 25;	//25 for 512b pages, 12 for 1k pages
 const static uint64_t BASEPAGES = 5;	//5 for 512b pages, 3 for 1k pages 
 const static uint64_t COREOFFSET = 1024;
 const static uint64_t CACHES_AVAILABLE = 256;
+const static uint64_t lineSize = 16;
 
 using namespace std;
 
@@ -51,11 +52,8 @@ Processor::Processor(Tile *parent, MainWindow *mW, uint64_t numb):
 	registerFile = vector<uint64_t>(REGISTER_FILE_SIZE, 0);
 	statusWord[0] = true;
 	totalTicks = 1;
-	currentTLB = 0;
 	hardFaultCount = 0;
-	smallFaultCount = 0;
     	blocks = 0;
-        randomPage = 7;
 	inInterrupt = false;
     	processorNumber = numb;
     	clockDue = false;
@@ -66,7 +64,6 @@ Processor::Processor(Tile *parent, MainWindow *mW, uint64_t numb):
 void Processor::resetCounters()
 {
 	hardFaultCount = 0;
-	smallFaultCount = 0;
 	blocks = 0;
 	serviceTime = 0;
 }
@@ -126,37 +123,6 @@ void Processor::writeOutBasicTableEntries(const uint64_t& pagesAvailable)
 	}
 }
 
-void Processor::markUpBasicPageEntries(const uint64_t& reqPTEPages,
-	const uint64_t& reqBitmapPages)
-{
-	//mark for page tables, bit map and 2 notional page for kernel
-	for (unsigned int i = 0;
-			i < (reqPTEPages + reqBitmapPages + KERNELPAGES); i++) {
-		const uint64_t pageEntryBase = (1 << pageShift) * KERNELPAGES +
-			i * PAGETABLEENTRY + PAGESLOCAL;
-		const uint64_t mappingAddress = PAGESLOCAL +
-			i * (1 << pageShift);
-        	masterTile->writeLong(pageEntryBase + VOFFSET,
-            		mappingAddress);
-        	masterTile->writeLong(pageEntryBase + POFFSET,
-            		mappingAddress);
-		masterTile->writeWord32(pageEntryBase + FLAGOFFSET, 0x07);
-	}
-	//stack
-    	uint64_t stackFrame = (TILE_MEM_SIZE >> pageShift) - 1;
-	uint64_t stackInTable = (1 << pageShift) * KERNELPAGES + 
-        	stackFrame * PAGETABLEENTRY + PAGESLOCAL;
-	for (unsigned int i = 0; i < STACKPAGES; i++) {
-    		masterTile->writeLong(stackInTable + VOFFSET,
-        		stackFrame * (1 << pageShift) + PAGESLOCAL);
-    		masterTile->writeLong(stackInTable + POFFSET,
-       			stackFrame * (1 << pageShift) + PAGESLOCAL);
-		masterTile->writeWord32(stackInTable + FLAGOFFSET, 0x07);
-		stackInTable -= PAGETABLEENTRY;
-		stackFrame--;
-	}
-}
-
 void Processor::flushPagesStart()
 {
     interruptBegin();
@@ -183,60 +149,13 @@ void Processor::createMemoryMap(Memory *local)
 	stackPointer = TILE_MEM_SIZE + PAGESLOCAL;
 	stackPointerUnder = stackPointer;
 	stackPointerOver = stackPointer - 1024;
-
-
-	writeOutBasicTableEntries(pagesAvailable);
-	markUpBasicPageEntries(requiredPTEPages, requiredBitmapPages);
-	pageMask = 0xFFFFFFFFFFFFFFFF;
-	pageMask = pageMask >> pageShift;
-	pageMask = pageMask << pageShift;
-	bitMask = ~ pageMask;
-	uint64_t pageCount =
-		requiredPTEPages + requiredBitmapPages + KERNELPAGES;
-	for (unsigned int i = 0; i <= pageCount; i++) {
-		const uint64_t pageStart =
-			PAGESLOCAL + i * (1 << pageShift);
-		fixTLB(i, pageStart);
-        	for (unsigned int j = 0; j < bitmapSize * BITS_PER_BYTE; j++) {
-			markBitmapInit(i, pageStart + j * BITMAP_BYTES);
-		}
-	}
-	//TLB and bitmap for stack
-	uint64_t stackPage = PAGESLOCAL + TILE_MEM_SIZE; 
-	uint64_t stackPageNumber = pagesAvailable;
-	for (unsigned int i = 0; i < STACKPAGES; i++) {
-		stackPageNumber--;
-		stackPage -= (1 << pageShift);
-		fixTLB(stackPageNumber, stackPage);
-		for (unsigned int i = 0; i < bitmapSize * BITS_PER_BYTE; i++) {
-			markBitmapInit(stackPageNumber, stackPage +
-				i * BITMAP_BYTES);
-		}
-	}
-}
-
-bool Processor::isBitmapValid(const uint64_t& address,
-	const uint64_t& physAddress) const
-{
-	const uint64_t pageTablePages = masterTile->readLong(PAGESLOCAL);
-	const uint64_t bitmapSize = (1 << pageShift) / (BITMAP_BYTES * 8);
-	const uint64_t bitmapOffset = (KERNELPAGES + pageTablePages) * (1 << pageShift);
-	uint64_t bitToCheck = ((address & bitMask) / BITMAP_BYTES);
-	const uint64_t bitToCheckOffset = bitToCheck / 8;
-	bitToCheck %= 8;
-	const uint64_t frameNo =
-		(physAddress - PAGESLOCAL) >> pageShift;
-	const uint8_t bitFromBitmap = 
-		masterTile->readByte(PAGESLOCAL + bitmapOffset +
-		frameNo * bitmapSize + bitToCheckOffset);
-	return bitFromBitmap & (1 << bitToCheck);
 }
 
 uint64_t Processor::generateAddress(const uint64_t& frame,
 	const uint64_t& address) const
 {
 	uint64_t offset = address & bitMask;
-	return (frame << pageShift) + offset + PAGESLOCAL;
+	return frame * lineSize + offset + PAGESLOCAL;
 }
 
 void Processor::interruptBegin()
@@ -330,11 +249,10 @@ const pair<const uint64_t, bool> Processor::getFreeFrame()
 {
 	//have we any empty frames?
 	//we assume this to be subcycle
-	uint64_t frames = (localMemory->getSize()) >> pageShift;
-	uint64_t couldBe = 0xFFFF;
+	uint64_t frames = CACHES_AVAILABLE;
 	for (uint64_t i = 0; i < frames; i++) {
 		uint32_t flags = masterTile->readWord32(
-			(1 << pageShift) * KERNELPAGES
+			COREOFFSET
 			+ i * PAGETABLEENTRY + FLAGOFFSET + PAGESLOCAL);
 		if (!(flags & 0x01)) {
 			return pair<const uint64_t, bool>(i, false);
@@ -563,30 +481,15 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 {
 	//implement paging logic
 	if (mode == VIRTUAL) {
-		uint64_t pageSought = address & pageMask;
+		uint64_t lineSought = address & cacheMask;
 		uint64_t y = 0;
-		for (auto x: tlbs) {
-			if (get<2>(x) && ((pageSought) ==
-						(get<0>(x) & pageMask))) {
-				//entry in TLB - check bitmap
-				for (uint64_t i = 0; i < BITMAPDELAY; i++) {
-					waitATick();
-				}
-				if (!isBitmapValid(address, get<1>(x))) {
-					return triggerSmallFault(x,
-						address, write);
-				}
-				return generateAddress(y, address);
-			}
-            		y++;
-		}
 		//not in TLB - but check if it is in page table
 		waitATick(); 
 		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
 			waitATick();
             		uint64_t addressInPageTable = PAGESLOCAL +
                         	(i * PAGETABLEENTRY) + 
-				(1 << pageShift) * KERNELPAGES;
+				COREOFFSET;
             		uint64_t flags =
 				masterTile->readWord32(addressInPageTable
                         	+ FLAGOFFSET);
@@ -594,19 +497,20 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
                 		continue;
             		}
             		waitATick();
-            		uint64_t storedPage = masterTile->readLong(
+            		uint64_t storedLine = masterTile->readLong(
                         	addressInPageTable + VOFFSET);
             		waitATick();
-            		if (pageSought == storedPage) {
+            		if (lineSought == storedPage) {
                 		waitATick();
                 		flags |= 0x04;
                 		masterTile->writeWord32(
 					addressInPageTable + FLAGOFFSET,
                     			flags);
                 		waitATick();
-                		fixTLB(i, address);
+				masterTile->writeLong(addressInPageTable +
+					CLOCKOFFSET, totalTicks); 
                 		waitATick();
-                		return fetchAddressRead(address);
+                		return generateAddress(i, address);
             		}
 			waitATick();
         	}

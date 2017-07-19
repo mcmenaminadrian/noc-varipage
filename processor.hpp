@@ -76,11 +76,6 @@ private:
 	bool inInterrupt;
 	bool inClock;
 	bool clockDue;
-	void markUpBasicPageEntries(const uint64_t& reqPTEPages,
-		const uint64_t& reqBitmapPages);
-	void writeOutBasicPageEntries(const uint64_t& reqPTEPages);
-	void writeOutPageAndBitmapLengths(const uint64_t& reqPTESize,
-		const uint64_t& reqBitmapPages);
 	uint64_t fetchAddressRead(const uint64_t& address,
 		const bool& readOnly = true, const bool& write = false);
     	uint64_t fetchAddressWrite(const uint64_t& address);
