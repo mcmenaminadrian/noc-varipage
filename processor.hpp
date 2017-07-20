@@ -68,7 +68,7 @@ private:
 	uint64_t stackPointerOver;
 	uint64_t stackPointerUnder;
 	uint64_t pageMask;
-	uint64_t bitMask;
+	uint64_t lineMask;
 	uint64_t memoryAvailable;
 	uint64_t pagesAvailable;
 	uint64_t processorNumber;
@@ -86,11 +86,10 @@ private:
 	void interruptBegin();
 	void interruptEnd();
 	void transferGlobalToLocal(const uint64_t& address,
-	const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
     		const uint64_t& size, const bool& write);
     	uint64_t triggerHardFault(const uint64_t& address, const bool& readOnly,
         	const bool& write);
-	const std::pair<const uint64_t, bool> getRandomFrame();
+	std::pair<const uint64_t, bool> getRandomFrame();
 	const std::pair<const uint64_t, bool> getFreeFrame();
 	void fixPageMap(const uint64_t& frameNo,
         const uint64_t& address, const bool& readOnly);
@@ -108,6 +107,7 @@ private:
     	const uint8_t clockWipe = 1;
     	const uint16_t clockTicks = 1000;
 	uint64_t totalTicks;
+	uint64_t uninterruptedTicks;
 	uint64_t currentTLB;
 
 public:
