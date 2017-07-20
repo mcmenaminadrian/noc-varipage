@@ -481,12 +481,11 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 	const bool& readOnly, const bool& write)
 {
 	//implement paging logic
+	int nomineeFrame = -1;
 	if (mode == VIRTUAL) {
 		uint64_t lineSought = address & cacheMask;
-		uint64_t y = 0;
-		//not in TLB - but check if it is in page table
 		waitATick(); 
-		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
+		for (unsigned int i = 0; i < CACHES_AVAILABLE; i++) {
 			waitATick();
             		uint64_t addressInPageTable = PAGESLOCAL +
                         	(i * PAGETABLEENTRY) + 
@@ -495,19 +494,19 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 				masterTile->readWord32(addressInPageTable
                         	+ FLAGOFFSET);
             		if (!(flags & 0x01)) {
+				nomineeFrame = i;
                 		continue;
             		}
             		waitATick();
             		uint64_t storedLine = masterTile->readLong(
                         	addressInPageTable + VOFFSET);
             		waitATick();
-            		if (lineSought == storedPage) {
+            		if (lineSought == storedLine) {
                 		waitATick();
                 		flags |= 0x04;
                 		masterTile->writeWord32(
 					addressInPageTable + FLAGOFFSET,
                     			flags);
-                		waitATick();
 				masterTile->writeLong(addressInPageTable +
 					CLOCKOFFSET, uninterruptedTicks); 
                 		waitATick();
@@ -516,7 +515,7 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 			waitATick();
         	}
         	waitATick();
-        	return triggerHardFault(address, readOnly, write);
+        	return triggerHardFault(address, readOnly, write, nomineeFrame);
 	} else {
 		//what do we do if it's physical address?
 		return address;
@@ -526,68 +525,39 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 {
 	const bool readOnly = false;
+	int nomineeFrame = -1;
 	//implement paging logic
 	if (mode == VIRTUAL) {
-		uint64_t pageSought = address & pageMask;
-		uint64_t y = 0;
-		for (auto x: tlbs) {
-			if (get<2>(x) && ((pageSought) ==
-				(get<0>(x) & pageMask))) {
-				//ensure marked as writable page
-				uint64_t baseAddress = PAGESLOCAL +
-					(y * PAGETABLEENTRY) +
-					(1 << pageShift) * KERNELPAGES;
-				uint64_t addressPT = masterTile->
-					readLong(baseAddress + VOFFSET);
-				uint32_t oldFlags = masterTile->
-					readWord32(baseAddress + FLAGOFFSET);
-				if (!(oldFlags & 0x08)) {
-					waitATick();	
-					masterTile->writeWord32(baseAddress +
-						FLAGOFFSET, oldFlags|0x08);
-					waitATick();
-				}
-				for (uint64_t i = 0; i < BITMAPDELAY; i++) {
-					waitATick();
-				}
-				if (!isBitmapValid(address, get<1>(x))) {
-					return triggerSmallFault(x, address,
-						true);
-				}
-				return generateAddress(y, address);
-			}
-			y++;
-		}
-		//not in TLB - but check if it is in page table
+		uint64_t lineSought = address & cacheMask;
 		waitATick();
-		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
+		for (unsigned int i = 0; i < CACHES_AVAILABLE; i++) {
 			waitATick();
 			uint64_t addressInPageTable = PAGESLOCAL +
-				(i * PAGETABLEENTRY) +
-				(1 << pageShift) * KERNELPAGES;
+				(i * PAGETABLEENTRY) + COREOFFSET;
 			uint32_t flags = masterTile->readWord32(addressInPageTable
 				+ FLAGOFFSET);
 			if (!(flags & 0x01)) {
+				nomineeFrame = i;
 				continue;
 			}
 			waitATick();
-			uint64_t storedPage = masterTile->readLong(
+			uint64_t storedLine = masterTile->readLong(
 				addressInPageTable + VOFFSET);
 			waitATick();
-			if (pageSought == storedPage) {
+			if (lineSought == storedLine) {
 				waitATick();
 				flags |= 0x04;
 				masterTile->writeWord32(addressInPageTable +
 					FLAGOFFSET, flags);
+				masterTile->writeLong(addressInPageTable +
+					CLOCKOFFSET, uninterruptedTicks);
 				waitATick();
-				fixTLB(i, address);
-				waitATick();
-				return fetchAddressWrite(address);
+				return generateAddress(i, address);
 			}
 			waitATick();
 		}
 		waitATick();
-		return triggerHardFault(address, readOnly, true);
+		return triggerHardFault(address, readOnly, true, nomineeFrame);
 	} else {
 		//what do we do if it's physical address?
 		return address;
