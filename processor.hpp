@@ -90,10 +90,10 @@ private:
     		const uint64_t& size, const bool& write);
     	uint64_t triggerHardFault(const uint64_t& address, const bool& readOnly,
         	const bool& write, const int& nomineeFrame);
-	std::pair<const uint64_t, bool> getRandomFrame();
-	const std::pair<const uint64_t, bool> getFreeFrame();
+	std::pair<uint64_t, bool> getFreeFrame();
+	std::pair<uint64_t, bool> getFrameStatus(int nominatedFrame);
 	void fixPageMap(const uint64_t& frameNo,
-        const uint64_t& address, const bool& readOnly);
+        	const uint64_t& address, const bool& readOnly);
 	void fixPageMapStart(const uint64_t& frameNo,
 		const uint64_t& address);
 	const std::vector<uint8_t>
@@ -153,7 +153,7 @@ public:
     	void checkCarryBit();
     	void writeBackMemory(const uint64_t& frameNo);
     	void transferLocalToGlobal(const uint64_t& address,
-        	const uint64_t frameNo);
+        	const uint64_t& frameNo);
 	void waitATick();
 	void waitGlobalTick();
 	Tile* getTile() const { return masterTile; }
