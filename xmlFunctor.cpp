@@ -76,8 +76,7 @@ void XMLFunctor::operator()()
     	cout << "===========" << endl;
     	cout << "On pass " << pass << endl;
     	cout << "Task on " << order << " completed." << endl;
-   	cout << "Hard fault count: " << proc->hardFaultCount << endl;
-    	cout << "Small fault count: " << proc->smallFaultCount << endl;
+   	cout << "Fault count: " << proc->hardFaultCount << endl;
     	cout << "Blocks: " << proc->blocks << endl;
     	cout << "Service time: " << proc->serviceTime << endl;
     	cout << "Ticks: " << proc->getTicks() << endl;
