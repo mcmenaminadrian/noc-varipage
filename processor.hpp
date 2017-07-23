@@ -86,9 +86,10 @@ private:
 	void interruptBegin();
 	void interruptEnd();
 	void transferGlobalToLocal(const uint64_t& address,
+		const uint64_t& localAddress,
     		const uint64_t& size, const bool& write);
     	uint64_t triggerHardFault(const uint64_t& address, const bool& readOnly,
-        	const bool& write);
+        	const bool& write, const int& nomineeFrame);
 	std::pair<const uint64_t, bool> getRandomFrame();
 	const std::pair<const uint64_t, bool> getFreeFrame();
 	void fixPageMap(const uint64_t& frameNo,
@@ -103,6 +104,7 @@ private:
         	mapToGlobalAddress(const uint64_t& address);
     	void fetchAddressToRegister();
 	void activateClock();
+	void writeOutBasicPageTableEntries();
 	//adjust numbers below to change how CLOCK fuctions
     	const uint8_t clockWipe = 1;
     	const uint16_t clockTicks = 1000;
@@ -117,7 +119,7 @@ public:
 	void switchModeReal();
 	void switchModeVirtual();
 	void setMode();
-	void createMemoryMap(Memory *local, long pShift);
+	void createMemoryMap(Memory *local);
 	void setPCNull();
 	void start();
 	void pcAdvance(const long count = sizeof(long));
@@ -151,8 +153,7 @@ public:
     	void checkCarryBit();
     	void writeBackMemory(const uint64_t& frameNo);
     	void transferLocalToGlobal(const uint64_t& address,
-        const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
-       		const uint64_t& size);
+        	const uint64_t frameNo);
 	void waitATick();
 	void waitGlobalTick();
 	Tile* getTile() const { return masterTile; }

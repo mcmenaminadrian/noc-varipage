@@ -97,16 +97,7 @@ void Processor::switchModeVirtual()
 	}
 }
 
-void Processor::zeroOutTLBs(const uint64_t& frames)
-{
-	for (unsigned int i = 0; i < frames; i++) {
-		tlbs.push_back(tuple<uint64_t, uint64_t, bool>
-			(PAGESLOCAL + (1 << pageShift) * i,
-			 PAGESLOCAL + (1 << pageShift) * i, false));
-	}
-}
-
-void Processor::writeOutBasicTableEntries(const uint64_t& pagesAvailable)
+void Processor::writeOutBasicPageTableEntries()
 {
 	const uint64_t tablesOffset = COREOFFSET 
 		+ PAGESLOCAL;
@@ -151,6 +142,7 @@ void Processor::createMemoryMap(Memory *local)
 	stackPointer = TILE_MEM_SIZE + PAGESLOCAL;
 	stackPointerUnder = stackPointer;
 	stackPointerOver = stackPointer - 1024;
+	writeOutBasicPageTableEntries();
 }
 
 uint64_t Processor::generateAddress(const uint64_t& frame,
@@ -212,7 +204,7 @@ void Processor::transferGlobalToLocal(const uint64_t& remoteAddress,
 	const uint64_t& localAddress, const uint64_t& size, const bool& write)
 {
 	//mimic a DMA call - so need to advance PC
-	uint64_t maskedAddress = address & BITMAP_MASK;
+	uint64_t maskedAddress = remoteAddress & BITMAP_MASK;
 	int offset = 0;
 	vector<uint8_t> answer = requestRemoteMemory(size,
 		maskedAddress, localAddress +
@@ -391,7 +383,7 @@ const pair<uint64_t, uint8_t>
 }
 
 uint64_t Processor::triggerHardFault(const uint64_t& address,
-    const bool& readOnly, const bool& write, int nomineeFrame)
+    const bool& readOnly, const bool& write, const int& nomineeFrame)
 {
 	emit hardFault();
 	hardFaultCount++;
