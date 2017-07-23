@@ -405,7 +405,7 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 	pair<uint64_t, uint8_t> translatedAddress = mapToGlobalAddress(address);
 	transferGlobalToLocal(translatedAddress.first + (address & lineMask),
 		masterTile->readLong(frameData.first * PAGETABLEENTRY + 
-		COREOFFSET + PAGESLOCAL + POFFSET + (address & lineMask)), 
+		COREOFFSET + PAGESLOCAL + POFFSET), 
 		BITMAP_BYTES, write);
 	fixPageMap(frameData.first, translatedAddress.first, readOnly);
 	interruptEnd();
