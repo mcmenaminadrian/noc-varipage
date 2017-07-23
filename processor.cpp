@@ -216,33 +216,23 @@ void Processor::transferGlobalToLocal(const uint64_t& remoteAddress,
 	int offset = 0;
 	vector<uint8_t> answer = requestRemoteMemory(size,
 		maskedAddress, localAddress +
-		(maskedAddress & bitMask), write);
+		(maskedAddress & lineMask), write);
 	for (auto x: answer) {
 		masterTile->writeByte(localAddress + offset + 
-			(maskedAddress & bitMask), x);
+			(maskedAddress & lineMask), x);
 		offset++;
 	}
 }
 
 void Processor::transferLocalToGlobal(const uint64_t& address,
-	const tuple<uint64_t, uint64_t, bool>& tlbEntry,
-	const uint64_t& size)
+	const uint64_t& frameNo)
 {
 	//again - this is like a DMA call, there is a delay, but no need
 	//to advance the PC
-	uint64_t maskedAddress = address & BITMAP_MASK;
 	//make the call - ignore the results
-	requestRemoteMemory(size, get<0>(tlbEntry), maskedAddress, true);
-}
-
-const pair<const uint64_t, bool> Processor::getRandomFrame()
-{
-	waitATick();
-	//See 3.2.1 of Knuth (third edition)
-	//simple ramdom number generator
-	randomPage = (1 * randomPage + 1)%FREEPAGES;
-	waitATick(); //store
-	return pair<const uint64_t, bool>(randomPage + BASEPAGES, true);
+	const uint64_t localAddress = masterTile->readLong(COREOFFSET +
+		frameNo * PAGETABLEENTRY + VOFFSET);
+	requestRemoteMemory(16, address, localAddress, true);
 }
 
 //nominate a frame to be used
@@ -286,54 +276,18 @@ pair<const uint64_t, bool> Processor::getFrameStatus(int nominatedFrame)
 //only used to dump a frame
 void Processor::writeBackMemory(const uint64_t& frameNo)
 {
-	//is this a read-only frame?
-	if (localMemory->readWord32((1 << pageShift) * KERNELPAGES +
-		frameNo * PAGETABLEENTRY + FLAGOFFSET) & 0x08) {
+	//is this read-only?
+	if (localMemory->readWord32(COREOFFSET + frameNo * PAGETABLEENTRY +
+		FLAGOFFSET) & 0x08) {
     		return;
 	}
-	//find bitmap for this frame
-	const uint64_t totalPTEPages =
-		masterTile->readLong(fetchAddressRead(PAGESLOCAL));
-	const uint64_t bitmapOffset =
-		(KERNELPAGES + totalPTEPages) * (1 << pageShift);
-	const uint64_t bitmapSize = (1 << pageShift) / BITMAP_BYTES;
-	uint64_t bitToRead = frameNo * bitmapSize;
 	const uint64_t physicalAddress = mapToGlobalAddress(
-		localMemory->readLong((1 << pageShift) * KERNELPAGES +
+		localMemory->readLong(COREOFFSET +
 		frameNo * PAGETABLEENTRY)).first;
-	long byteToRead = -1;
-	uint8_t byteBit = 0;
-	for (unsigned int i = 0; i < bitmapSize; i++)
-	{
-		long nextByte = bitToRead / 8;
-		if (nextByte != byteToRead) {
-			byteBit =
-				localMemory->readByte(bitmapOffset + nextByte);
-			byteToRead = nextByte;
-		}
-		uint8_t actualBit = bitToRead%8;
-		if (byteBit & (1 << actualBit)) {
-			//simulate transfer
-			transferLocalToGlobal(frameNo * (1 << pageShift) +
-				PAGESLOCAL +
-				i * BITMAP_BYTES, tlbs[frameNo], BITMAP_BYTES);
-			for (unsigned int j = 0;
-				j < BITMAP_BYTES/sizeof(uint64_t); j++)
-			{
-				//actual transfer done in here
-				waitATick();
-				uint64_t toGo = masterTile->readLong(
-					fetchAddressRead(
-					frameNo * (1 << pageShift) +
-					PAGESLOCAL + i * BITMAP_BYTES +
-					j * sizeof(uint64_t)));
-				masterTile->writeLong(fetchAddressWrite(
-					physicalAddress + i * BITMAP_BYTES
-					+ j * sizeof(uint64_t)), toGo);
-			}
-		}
-		bitToRead++;
-	}
+	transferLocalToGlobal(physicalAddress, frameNo);
+	masterTile->writeLong(fetchAddressWrite(
+		physicalAddress + i * BITMAP_BYTES
+		+ j * sizeof(uint64_t)), toGo);
 }
 
 void Processor::fixPageMap(const uint64_t& frameNo,
@@ -453,7 +407,7 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 		writeBackMemory(frameData.first);
 	}
 	pair<uint64_t, uint8_t> translatedAddress = mapToGlobalAddress(address);
-	transferGlobalToLocal(translatedAddress.first + (address & bitMask),
+	transferGlobalToLocal(translatedAddress.first + (address & lineMask),
 		masterTile->readLong(frameData.first * PAGETABLEENTRY + 
 		COREOFFSET + PAGESLOCAL + POFFSET + address & lineMask); 
 		BITMAP_BYTES, write);
