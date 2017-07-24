@@ -239,7 +239,7 @@ pair<uint64_t, bool> Processor::getFreeFrame()
 		flags = flags^0x04;
 		waitATick();
 		uint64_t timeToKill = masterTile->readLong(COREOFFSET + i *
-			PAGETABLEENTRY * CLOCKOFFSET + PAGESLOCAL);
+			PAGETABLEENTRY + CLOCKOFFSET + PAGESLOCAL);
 		waitATick();
 		if (timeToKill < killerTime) {
 			waitATick();
@@ -653,13 +653,13 @@ void Processor::popStackPointer()
 
 void Processor::activateClock()
 {
-	//WS window 10 times bigger than clock sweep
+	//WS window 9 times bigger than clock sweep
 	if (inInterrupt) {
 		return;
 	}
 	inClock = true;
 	interruptBegin();
-	uint64_t cutoffTime = uninterruptedTicks - (clockTicks * 10);
+	uint64_t cutoffTime = uninterruptedTicks - (clockTicks * 9);
 	for (uint64_t i = 0; i < CACHES_AVAILABLE; i++) {
 		waitATick();
 		uint64_t flagAddress = COREOFFSET 
