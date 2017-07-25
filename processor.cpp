@@ -383,7 +383,7 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 	interruptBegin();
 	pair<uint64_t, bool> frameData;
 	if (nomineeFrame < 0) {
-		//emergency
+		//emergency?
 		frameData = getFreeFrame();
 	} else {
 		frameData = getFrameStatus(nomineeFrame);
@@ -420,6 +420,7 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 {
 	//implement paging logic
 	int nomineeFrame = -1;
+	int testFrame = -1;
 	if (mode == VIRTUAL) {
 		uint64_t lineSought = address & maskAddress;
 		waitATick(); 
@@ -434,7 +435,12 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
             		if (!(flags & 0x01)) {
 				nomineeFrame = i;
                 		continue;
-            		}
+            		} else {
+				waitATick();
+				if (!(flags & 0x04)) {
+					testFrame = i;
+				}
+			}
             		waitATick();
             		uint64_t storedLine = masterTile->readLong(
                         	addressInPageTable + VOFFSET);
@@ -453,6 +459,10 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 			waitATick();
         	}
         	waitATick();
+		if (nomineeFrame < 0) {
+			nomineeFrame = testFrame;
+			waitATick();
+		}
         	return triggerHardFault(address, readOnly, write, nomineeFrame);
 	} else {
 		//what do we do if it's physical address?
