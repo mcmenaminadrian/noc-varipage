@@ -58,7 +58,8 @@ Processor::Processor(Tile *parent, MainWindow *mW, uint64_t numb):
 	inInterrupt = false;
     	processorNumber = numb;
     	clockDue = false;
-	lineMask = 0x0F; //16 bytes per line
+	maskLine = 0x0F; //16 bytes per line
+	maskAddress = 0xFFFFFFFFFFFFFFF0;
     	QObject::connect(this, SIGNAL(hardFault()),
         	mW, SLOT(updateHardFaults()));
 }
@@ -147,7 +148,7 @@ void Processor::createMemoryMap(Memory *local)
 uint64_t Processor::generateAddress(const uint64_t& frame,
 	const uint64_t& address) const
 {
-	uint64_t offset = address & lineMask;
+	uint64_t offset = address & maskLine;
 	return frame * lineSize + offset + PAGESLOCAL;
 }
 
@@ -207,10 +208,10 @@ void Processor::transferGlobalToLocal(const uint64_t& remoteAddress,
 	int offset = 0;
 	vector<uint8_t> answer = requestRemoteMemory(size,
 		maskedAddress, localAddress +
-		(maskedAddress & lineMask), write);
+		(maskedAddress & maskLine), write);
 	for (auto x: answer) {
 		masterTile->writeByte(localAddress + offset + 
-			(maskedAddress & lineMask), x);
+			(maskedAddress & maskLine), x);
 		offset++;
 	}
 }
@@ -289,7 +290,7 @@ void Processor::writeBackMemory(const uint64_t& frameNo)
 void Processor::fixPageMap(const uint64_t& frameNo,
     const uint64_t& address, const bool& readOnly)
 {
-	const uint64_t pageAddress = address & lineMask;
+	const uint64_t pageAddress = address & maskAddress;
 	const uint64_t writeBase = COREOFFSET
 		 + frameNo * PAGETABLEENTRY;
 	waitATick();
@@ -303,18 +304,6 @@ void Processor::fixPageMap(const uint64_t& frameNo,
 	waitATick();
 	localMemory->writeLong(writeBase + CLOCKOFFSET, uninterruptedTicks);
 }
-
-//write in initial page of code
-void Processor::fixPageMapStart(const uint64_t& frameNo,
-	const uint64_t& address) 
-{
-	const uint64_t pageAddress = address & pageMask;
-	localMemory->writeLong((1 << pageShift) * KERNELPAGES +
-		frameNo * PAGETABLEENTRY + VOFFSET, pageAddress);
-	localMemory->writeWord32((1 << pageShift) * KERNELPAGES  +
-		frameNo * PAGETABLEENTRY + FLAGOFFSET, 0x0D);
-}
-
 
 // bit lengths
 static inline uint64_t bit_mask(uint64_t x)
@@ -403,14 +392,14 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 		writeBackMemory(frameData.first);
 	}
 	pair<uint64_t, uint8_t> translatedAddress = mapToGlobalAddress(address);
-	transferGlobalToLocal(translatedAddress.first + (address & lineMask),
+	transferGlobalToLocal(translatedAddress.first + (address & 0x1FF),
 		masterTile->readLong(frameData.first * PAGETABLEENTRY + 
 		COREOFFSET + PAGESLOCAL + POFFSET), 
 		BITMAP_BYTES, write);
 	fixPageMap(frameData.first, translatedAddress.first, readOnly);
 	interruptEnd();
 	return generateAddress(frameData.first, translatedAddress.first +
-		(address & lineMask));
+		(address & 0x1FF));
 }
 
 void Processor::incrementBlocks()
@@ -432,7 +421,7 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 	//implement paging logic
 	int nomineeFrame = -1;
 	if (mode == VIRTUAL) {
-		uint64_t lineSought = address & lineMask;
+		uint64_t lineSought = address & maskAddress;
 		waitATick(); 
 		for (unsigned int i = 0; i < CACHES_AVAILABLE; i++) {
 			waitATick();
@@ -477,7 +466,7 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 	int nomineeFrame = -1;
 	//implement paging logic
 	if (mode == VIRTUAL) {
-		uint64_t lineSought = address & lineMask;
+		uint64_t lineSought = address & maskAddress;
 		waitATick();
 		for (unsigned int i = 0; i < CACHES_AVAILABLE; i++) {
 			waitATick();

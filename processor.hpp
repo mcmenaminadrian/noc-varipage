@@ -67,8 +67,8 @@ private:
 	uint64_t stackPointer;
 	uint64_t stackPointerOver;
 	uint64_t stackPointerUnder;
-	uint64_t pageMask;
-	uint64_t lineMask;
+	uint64_t maskAddress;
+	uint64_t maskLine;
 	uint64_t memoryAvailable;
 	uint64_t pagesAvailable;
 	uint64_t processorNumber;
@@ -94,8 +94,6 @@ private:
 	std::pair<uint64_t, bool> getFrameStatus(int nominatedFrame);
 	void fixPageMap(const uint64_t& frameNo,
         	const uint64_t& address, const bool& readOnly);
-	void fixPageMapStart(const uint64_t& frameNo,
-		const uint64_t& address);
 	const std::vector<uint8_t>
 		requestRemoteMemory(
 		const uint64_t& size, const uint64_t& remoteAddress,
