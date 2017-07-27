@@ -676,6 +676,10 @@ void Processor::activateClock()
 	}
 	inClock = true;
 	interruptBegin();
+	if (uninterruptedTicks < (clockTicks * 20)) {
+		waitATick();
+		return;
+	}
 	uint64_t cutoffTime = uninterruptedTicks - (clockTicks * 20);
 	for (uint64_t i = 0; i < CACHES_AVAILABLE; i++) {
 		waitATick();
