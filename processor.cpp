@@ -280,7 +280,7 @@ void Processor::writeBackMemory(const uint64_t& frameNo)
 	transferLocalToGlobal(physicalAddress, frameNo);
 	for (int i = 0; i < 16; i++) {	
 		uint64_t toGo = masterTile->readByte(fetchAddressRead(
-			localMemory->readLong(frameNo * PAGETABLEENTRY + 
+			localMemory->readByte(frameNo * PAGETABLEENTRY + 
 				COREOFFSET + VOFFSET)) + i);
 		masterTile->writeByte(fetchAddressWrite(physicalAddress + i), 
 			toGo);
