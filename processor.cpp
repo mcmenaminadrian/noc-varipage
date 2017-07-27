@@ -396,7 +396,8 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 		masterTile->readLong(frameData.first * PAGETABLEENTRY + 
 		COREOFFSET + PAGESLOCAL + POFFSET), 
 		BITMAP_BYTES, write);
-	fixPageMap(frameData.first, translatedAddress.first, readOnly);
+	fixPageMap(frameData.first, translatedAddress.first + (address & 0x1F0),
+		readOnly);
 	interruptEnd();
 	return generateAddress(frameData.first, translatedAddress.first +
 		(address & 0x1FF));
