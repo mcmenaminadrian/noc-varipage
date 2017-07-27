@@ -278,11 +278,11 @@ void Processor::writeBackMemory(const uint64_t& frameNo)
 		localMemory->readLong(COREOFFSET +
 		frameNo * PAGETABLEENTRY)).first;
 	transferLocalToGlobal(physicalAddress, frameNo);
-	for (int i = 0; i < 16; i+= sizeof(uint64_t)) {	
-		uint64_t toGo = masterTile->readLong(fetchAddressRead(
+	for (int i = 0; i < 16; i++) {	
+		uint64_t toGo = masterTile->readByte(fetchAddressRead(
 			localMemory->readLong(frameNo * PAGETABLEENTRY + 
 				COREOFFSET + VOFFSET)) + i);
-		masterTile->writeLong(fetchAddressWrite(physicalAddress + i), 
+		masterTile->writeByte(fetchAddressWrite(physicalAddress + i), 
 			toGo);
 	}
 }
@@ -696,6 +696,7 @@ void Processor::activateClock()
 		}
 		waitATick();
 		if (!(flags & 0x04)) {
+			writeBackMemory(i);
 			waitATick();
 			masterTile->writeWord32(flagAddress, 0);
 			continue;
