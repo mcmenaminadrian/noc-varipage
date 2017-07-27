@@ -433,12 +433,16 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 				masterTile->readWord32(addressInPageTable
                         	+ FLAGOFFSET);
             		if (!(flags & 0x01)) {
-				nomineeFrame = i;
+				if (nomineeFrame < 0) {
+					nomineeFrame = i;
+				}
                 		continue;
             		} else {
 				waitATick();
 				if (!(flags & 0x04)) {
-					testFrame = i;
+					if (testFrame < 0) {
+						testFrame = i;
+					}
 				}
 			}
             		waitATick();
@@ -474,6 +478,7 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 {
 	const bool readOnly = false;
 	int nomineeFrame = -1;
+	int testFrame = -1;
 	//implement paging logic
 	if (mode == VIRTUAL) {
 		uint64_t lineSought = address & maskAddress;
@@ -485,8 +490,17 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			uint32_t flags = masterTile->readWord32(addressInPageTable
 				+ FLAGOFFSET);
 			if (!(flags & 0x01)) {
-				nomineeFrame = i;
+				if (nomineeFrame < 0) {
+					nomineeFrame = i;
+				}
 				continue;
+            		 } else {
+				waitATick();
+				if (!(flags & 0x04)) {
+					if (testFrame < 0) {
+						testFrame = i;
+					}
+				}
 			}
 			waitATick();
 			uint64_t storedLine = masterTile->readLong(
@@ -505,6 +519,9 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			waitATick();
 		}
 		waitATick();
+		if (nomineeFrame < 0) {
+			nomineeFrame = testFrame;
+		}
 		return triggerHardFault(address, readOnly, true, nomineeFrame);
 	} else {
 		//what do we do if it's physical address?
@@ -652,13 +669,13 @@ void Processor::popStackPointer()
 
 void Processor::activateClock()
 {
-	//WS window 9 times bigger than clock sweep
+	//WS window 5 times bigger than clock sweep
 	if (inInterrupt) {
 		return;
 	}
 	inClock = true;
 	interruptBegin();
-	uint64_t cutoffTime = uninterruptedTicks - (clockTicks * 9);
+	uint64_t cutoffTime = uninterruptedTicks - (clockTicks * 5);
 	for (uint64_t i = 0; i < CACHES_AVAILABLE; i++) {
 		waitATick();
 		uint64_t flagAddress = COREOFFSET 
