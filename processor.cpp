@@ -670,13 +670,13 @@ void Processor::popStackPointer()
 
 void Processor::activateClock()
 {
-	//WS window 5 times bigger than clock sweep
+	//WS window 10 times bigger than clock sweep
 	if (inInterrupt) {
 		return;
 	}
 	inClock = true;
 	interruptBegin();
-	uint64_t cutoffTime = uninterruptedTicks - (clockTicks * 5);
+	uint64_t cutoffTime = uninterruptedTicks - (clockTicks * 10);
 	for (uint64_t i = 0; i < CACHES_AVAILABLE; i++) {
 		waitATick();
 		uint64_t flagAddress = COREOFFSET 
@@ -684,7 +684,7 @@ void Processor::activateClock()
 			i * PAGETABLEENTRY;
 		uint64_t clockAddress = COREOFFSET + PAGESLOCAL +
 			CLOCKOFFSET + i * PAGETABLEENTRY;
-		uint64_t flags = masterTile->readLong(flagAddress);
+		uint64_t flags = masterTile->readWord32(flagAddress);
 		uint64_t clockWas = masterTile->readLong(clockAddress);
 		waitATick();
 		if (!(flags & 0x01) || !(flags & 0x04)) {
