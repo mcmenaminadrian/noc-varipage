@@ -677,6 +677,8 @@ void Processor::activateClock()
 	inClock = true;
 	interruptBegin();
 	if (uninterruptedTicks < (clockTicks * 20)) {
+		inClock = false;
+		interruptEnd();
 		waitATick();
 		return;
 	}
@@ -709,7 +711,7 @@ void Processor::activateClock()
 		}
 		waitATick();
 	}
-	waitATick();
 	inClock = false;
 	interruptEnd();
+	waitATick();
 }
