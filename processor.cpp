@@ -149,7 +149,7 @@ uint64_t Processor::generateAddress(const uint64_t& frame,
 	const uint64_t& address) const
 {
 	uint64_t offset = address & maskLine;
-	return frame * lineSize + offset + PAGESLOCAL;
+	return COREOFFSET * 10 + frame * lineSize + offset + PAGESLOCAL;
 }
 
 void Processor::interruptBegin()
