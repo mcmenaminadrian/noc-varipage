@@ -204,11 +204,11 @@ void Processor::transferGlobalToLocal(const uint64_t& remoteAddress,
 	const uint64_t& localAddress, const uint64_t& size, const bool& write)
 {
 	//mimic a DMA call - so need to advance PC
-	uint64_t maskedAddress = remoteAddress & BITMAP_MASK;
+	uint64_t maskedAddress = remoteAddress & maskAddress;
 	int offset = 0;
 	vector<uint8_t> answer = requestRemoteMemory(size,
 		maskedAddress, localAddress +
-		(maskedAddress & maskLine), write);
+		(remoteAddress & maskLine), write);
 	for (auto x: answer) {
 		masterTile->writeByte(localAddress + offset + 
 			(maskedAddress & maskLine), x);
@@ -223,7 +223,7 @@ void Processor::transferLocalToGlobal(const uint64_t& address,
 	//to advance the PC
 	//make the call - ignore the results
 	const uint64_t localAddress = masterTile->readLong(COREOFFSET +
-		frameNo * PAGETABLEENTRY + VOFFSET);
+		frameNo * PAGETABLEENTRY + POFFSET);
 	requestRemoteMemory(16, address, localAddress, true);
 }
 
@@ -395,7 +395,7 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 	transferGlobalToLocal(translatedAddress.first + (address & 0x1FF),
 		masterTile->readLong(frameData.first * PAGETABLEENTRY + 
 		COREOFFSET + PAGESLOCAL + POFFSET), 
-		BITMAP_BYTES, write);
+		lineSize, write);
 	fixPageMap(frameData.first, translatedAddress.first + (address & 0x1F0),
 		readOnly);
 	interruptEnd();
