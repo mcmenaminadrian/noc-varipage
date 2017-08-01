@@ -676,13 +676,13 @@ void Processor::activateClock()
 	}
 	inClock = true;
 	interruptBegin();
-	if (uninterruptedTicks < (clockTicks * 75)) {
+	if (uninterruptedTicks < (clockTicks * 50)) {
 		inClock = false;
 		interruptEnd();
 		waitATick();
 		return;
 	}
-	uint64_t cutoffTime = uninterruptedTicks - (clockTicks * 75);
+	uint64_t cutoffTime = uninterruptedTicks - (clockTicks * 50);
 	for (uint64_t i = 0; i < CACHES_AVAILABLE; i++) {
 		waitATick();
 		uint64_t flagAddress = COREOFFSET 
