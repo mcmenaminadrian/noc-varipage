@@ -146,9 +146,10 @@ void Processor::createMemoryMap(Memory *local)
 }
 
 uint64_t Processor::generateAddress(const uint64_t& frame,
-	const uint64_t& address) const
+	const uint64_t& address)
 {
 	uint64_t offset = address & maskLine;
+	waitATick();
 	return COREOFFSET * 10 + frame * lineSize + offset + PAGESLOCAL;
 }
 
