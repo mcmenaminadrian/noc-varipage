@@ -502,8 +502,10 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 	}
 	pair<uint64_t, uint8_t> translatedAddress = mapToGlobalAddress(address);
 	fixTLB(frameData.first, translatedAddress.first);
-	transferGlobalToLocal(translatedAddress.first + (address & bitMask),
-		tlbs[frameData.first], BITMAP_BYTES, write);
+	for (int i = 0; i < (1 << pageShift); i+= BITMAP_BYTES) {
+		transferGlobalToLocal(translatedAddress.first + i,
+			tlbs[frameData.first], BITMAP_BYTES, write);
+	}
 	fixPageMap(frameData.first, translatedAddress.first, readOnly);
 	interruptEnd();
 	return generateAddress(frameData.first, translatedAddress.first +
