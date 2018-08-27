@@ -3,7 +3,7 @@
 #ifndef _MEMORY_CLASS_
 #define _MEMORY_CLASS_
 
-const uint64_t PAGE_SHIFT = 9;
+const uint64_t PAGE_SHIFT = 8;
 
 class Mux;
 
