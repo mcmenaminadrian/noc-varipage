@@ -357,7 +357,7 @@ const uint64_t Processor::getRandomFrame()
 	} 
 	
 	waitATick(); //store
-	return randomPage;
+	return randomPage + BASEPAGES;
 }
 
 //nominate a frame to be used
