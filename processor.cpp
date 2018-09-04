@@ -53,7 +53,7 @@ Processor::Processor(Tile *parent, MainWindow *mW, uint64_t numb):
 	hardFaultCount = 0;
 	smallFaultCount = 0;
     	blocks = 0;
-        randomPage = 7;
+        randomPage = -1;
 	inInterrupt = false;
     	processorNumber = numb;
     	clockDue = false;
@@ -347,42 +347,32 @@ uint64_t Processor::triggerSmallFault(
 	return generateAddress(frameNo, address);
 }
 
-const pair<const uint64_t, bool> Processor::getRandomFrame()
+const uint64_t Processor::getRandomFrame()
 {
 	waitATick();
-	//See 3.2.1 of Knuth (third edition)
-	//simple ramdom number generator
-	randomPage = (1 * randomPage + 1)%FREEPAGES;
+	if (randomPage == -1) {
+		randomPage = 0;
+	} else {
+		randomPage = (randomPage + 1) % FREEPAGES;
+	} 
+	
 	waitATick(); //store
-	return pair<const uint64_t, bool>(randomPage + BASEPAGES, true);
+	return randomPage;
 }
 
 //nominate a frame to be used
 const pair<const uint64_t, bool> Processor::getFreeFrame()
 {
+	const uint64_t pageNumber = getRandomFrame();
 	//have we any empty frames?
-	//we assume this to be subcycle
-	uint64_t frames = (localMemory->getSize()) >> pageShift;
-	uint64_t couldBe = 0xFFFF;
-	for (uint64_t i = 0; i < frames; i++) {
-		uint32_t flags = masterTile->readWord32(
-			(1 << pageShift) * KERNELPAGES
-			+ i * PAGETABLEENTRY + FLAGOFFSET + PAGESLOCAL);
+	uint32_t flags = masterTile->readWord32(
+		(1 << pageShift) * KERNELPAGES
+		+ pageNumber * PAGETABLEENTRY + FLAGOFFSET + PAGESLOCAL);
 		if (!(flags & 0x01)) {
-			return pair<const uint64_t, bool>(i, false);
+			return pair<const uint64_t, bool>(pageNumber, false);
+		} else {
+			return pair<const uint64_t, bool>(pageNumber, true);
 		}
-        	if (flags & 0x02) {
-			continue;
-		}
-        	else if (!(flags & 0x04)) {
-			couldBe = i;
-		}
-	}
-	if (couldBe < 0xFFFF) {
-		return pair<const uint64_t, bool>(couldBe, true);
-	}
-	//no free frames, so we have to pick one
-	return getRandomFrame();
 }
 
 //drop page from TLBs and page tables - no write back
@@ -917,13 +907,6 @@ void Processor::waitATick()
 	ControlThread *pBarrier = masterTile->getBarrier();
 	pBarrier->releaseToRun();
 	totalTicks++;
-	if (totalTicks%clockTicks == 0) {
-		clockDue = true;
-	}	
-	if (clockDue && inClock == false) {
-		clockDue = false;
-		activateClock();
-	}
 }
 
 void Processor::waitGlobalTick()
@@ -949,40 +932,6 @@ void Processor::popStackPointer()
         	cerr << "Stack Overflow" << endl;
         	throw "Stack Overflow\n";
 	}
-}
-
-void Processor::activateClock()
-{
-	if (inInterrupt) {
-		return;
-	}
-	inClock = true;
-	uint64_t pages = TILE_MEM_SIZE >> pageShift;
-	interruptBegin();
-	int wiped = 0;
-	for (uint8_t i = 0; i < pages; i++) {
-		waitATick();
-		uint64_t flagAddress = (1 << pageShift) * KERNELPAGES 
-			+ PAGESLOCAL + FLAGOFFSET +
-			((i + currentTLB) % pagesAvailable) * PAGETABLEENTRY;
-		uint32_t flags = masterTile->readWord32(flagAddress);
-		waitATick();
-		if (!(flags & 0x01) || flags & 0x02) {
-			continue;
-		}
-		flags = flags & (~0x04);
-		waitATick();
-		masterTile->writeWord32(flagAddress, flags);
-		waitATick();
-		get<2>(tlbs[(i + currentTLB) % pagesAvailable]) = false;
-		if (++wiped >= clockWipe){
-			break;
-		}
-	}
-	waitATick();
-	currentTLB = (currentTLB + clockWipe) % pagesAvailable;
-	inClock = false;
-	interruptEnd();
 }
 
 void Processor::dumpPageFromTLB(const uint64_t& address)

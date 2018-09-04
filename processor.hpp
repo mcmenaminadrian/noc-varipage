@@ -100,7 +100,7 @@ private:
     	uint64_t triggerHardFault(const uint64_t& address, const bool& readOnly,
         	const bool& write);
 	const std::pair<const uint64_t, bool> getRandomFrame();
-	const std::pair<const uint64_t, bool> getFreeFrame();
+	const uint64_t getFreeFrame();
 	void fixPageMap(const uint64_t& frameNo,
         const uint64_t& address, const bool& readOnly);
 	void fixPageMapStart(const uint64_t& frameNo,
@@ -121,7 +121,6 @@ private:
     	const std::pair<uint64_t, uint8_t>
         	mapToGlobalAddress(const uint64_t& address);
     	void fetchAddressToRegister();
-	void activateClock();
 	//adjust numbers below to change how CLOCK fuctions
     	const uint8_t clockWipe = 1;
     	const uint16_t clockTicks = 1000;
