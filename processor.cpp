@@ -27,7 +27,7 @@
 //bit 3 - 0 for read/write, 1 for read only
 
 //TLB model
-//first entry - virtual address 
+///first entry - virtual address 
 //second entry - physical address
 //third entry - bool for validity
 
@@ -37,7 +37,7 @@
 
 const static uint64_t KERNELPAGES = 2;	//2 gives 1k kernel on 512b paging
 const static uint64_t STACKPAGES = 2; 	//2 gives 1k stack on 512b paging
-const static uint64_t BITMAPDELAY = 5;	//0 for subcycle bitmap checks
+const static uint64_t BITMAPDELAY = 0;	//0 for subcycle bitmap checks
 const static uint64_t FREEPAGES = 25;	//25 for 512b pages, 12 for 1k pages
 const static uint64_t BASEPAGES = 5;	//5 for 512b pages, 3 for 1k pages 
 
@@ -833,17 +833,26 @@ void Processor::writeAddress(const uint64_t& address,
 
 void Processor::writeAddress64(const uint64_t& address)
 {
-    writeAddress(address, 0);
+	writeAddress(address, 0);
+	if ((address + 7) % BITMAP_BYTES < address % BITMAP_BYTES) {
+		writeAddress(address + 7, 0);
+	}
 }
 
 void Processor::writeAddress32(const uint64_t& address)
 {
-    writeAddress(address, 0);
+	writeAddress(address, 0);
+	if ((address + 3) % BITMAP_BYTES < address % BITMAP_BYTES ) {
+		writeAddress(address + 3, 0);
+	}
 }
 
 void Processor::writeAddress16(const uint64_t& address)
 {
-    writeAddress(address, 0);
+	writeAddress(address, 0);
+	if ((address + 1) % BITMAP_BYTES == 0) {
+		writeAddress(address + 1, 0);
+	}
 }
 
 void Processor::writeAddress8(const uint64_t& address)
@@ -856,9 +865,18 @@ uint64_t Processor::getLongAddress(const uint64_t& address)
 	return masterTile->readLong(fetchAddressRead(address));
 }
 
-uint8_t Processor::getAddress(const uint64_t& address)
+uint8_t Processor::getAddress(const uint64_t& address, const long& count)
 {
-	return masterTile->readByte(fetchAddressRead(address));
+	uint8_t retValue = masterTile->readByte(fetchAddressRead(address));
+	if (count > 0) {
+		uint position = address % BITMAP_BYTES;
+		uint newPosition = (address + count - 1) % BITMAP_BYTES;
+		if (newPosition <= position) {
+			retValue = masterTile->readByte(
+				fetchAddressRead(newPosition));
+		}
+	}
+	return retValue;
 }
 
 uint64_t Processor::getStackPointer() const
@@ -907,9 +925,22 @@ void Processor::start()
 
 void Processor::pcAdvance(const long count)
 {
-	programCounter += count;
-	fetchAddressRead(programCounter);
-	waitATick();
+	if (count == 0) {
+		return;
+	}
+	//check if we are going over a boundary
+	uint position = programCounter % BITMAP_BYTES;
+	uint updatePosition = (programCounter + count - 1) % BITMAP_BYTES;
+	if (updatePosition <= position) {
+		programCounter += count;
+		fetchAddressRead(programCounter);
+	}
+}
+
+void Processor::setProgramCounter(const uint64_t& address)
+{
+	programCounter = address;
+	fetchAddressRead(address);
 }
 
 void Processor::waitATick()
@@ -928,7 +959,7 @@ void Processor::waitATick()
 
 void Processor::waitGlobalTick()
 {
-    for (uint64_t i = 0; i < GLOBALCLOCKSLOW; i++) {
+    	for (uint64_t i = 0; i < GLOBALCLOCKSLOW; i++) {
 		waitATick();
 	}
 }
