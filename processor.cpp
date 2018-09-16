@@ -37,7 +37,7 @@
 
 const static uint64_t KERNELPAGES = 2;	//2 gives 1k kernel on 512b paging
 const static uint64_t STACKPAGES = 2; 	//2 gives 1k stack on 512b paging
-const static uint64_t BITMAPDELAY = 0;	//0 for subcycle bitmap checks
+const static uint64_t BITMAPDELAY = 5;	//0 for subcycle bitmap checks
 const static uint64_t FREEPAGES = 25;	//25 for 512b pages, 12 for 1k pages
 const static uint64_t BASEPAGES = 5;	//5 for 512b pages, 3 for 1k pages 
 
