@@ -868,7 +868,7 @@ uint64_t Processor::getLongAddress(const uint64_t& address)
 uint8_t Processor::getAddress(const uint64_t& address, const long& count)
 {
 	uint8_t retValue = masterTile->readByte(fetchAddressRead(address));
-	if (count > 0) {
+	if (count > 1) {
 		uint position = address % BITMAP_BYTES;
 		uint newPosition = (address + count - 1) % BITMAP_BYTES;
 		if (newPosition <= position) {
@@ -925,7 +925,7 @@ void Processor::start()
 
 void Processor::pcAdvance(const long count)
 {
-	if (count == 0) {
+	if (count < 2) {
 		return;
 	}
 	//check if we are going over a boundary
