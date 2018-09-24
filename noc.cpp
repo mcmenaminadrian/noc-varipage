@@ -126,7 +126,7 @@ fail:
 const static uint64_t SUPERDIRLEN = 11;
 const static uint64_t DIRLEN = 9;
 const static uint64_t SUPERTABLELEN = 9;
-const static uint64_t TABLELEN = 11;
+const static uint64_t TABLELEN = 12;
 unsigned long Noc::createBasicPageTables()
 {
 	uint64_t startOfPageTables = 2048;

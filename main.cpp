@@ -2,7 +2,7 @@
 #include "mainwindow.h"
 #include <QApplication>
 
-static const unsigned long PAGE_SHIFT = 8;
+static const unsigned long PAGE_SHIFT = 7;
 
 using namespace std;
 
