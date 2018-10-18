@@ -925,7 +925,7 @@ void Processor::start()
 	ControlThread *pBarrier = masterTile->getBarrier();
 	pBarrier->waitForBegin();
 	int jitter = rand() % 257; //pick a prime
-	for (int i = 0; i < jittr; i++){
+	for (int i = 0; i < jitter; i++){
 		idleTick();
 	}
 	pBarrier->sufficientPower(this);
@@ -948,7 +948,7 @@ void Processor::pcAdvance(const long count)
 
 void Processor::idleTick()
 {
-	ControlThread *pBarrier->masterTile->getBarrier();
+	ControlThread *pBarrier = masterTile->getBarrier();
 	pBarrier->releaseToRun();
 }
 
