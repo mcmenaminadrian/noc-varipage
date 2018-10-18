@@ -4,9 +4,21 @@
 #include <thread>
 #include <condition_variable>
 #include "mainwindow.h"
+#include "processor.hpp"
 #include "ControlThread.hpp"
 
 using namespace std;
+
+// 30% of 'full' power is used by network
+// which we cannot turn off
+// hence 35% gives us 5/70 * 128 cores etc
+// so 8 cores is 34.375% power
+// 12 cores is 36.5625% power
+// 16 cores is 38.75%
+// 32 cores is 47.5%
+// 50% is 36.57 cores ie 36
+// 75% is 82.28 cores ie 82 cores
+static uint POWER_MAX = 8; //maximum number of active cores
 
 ControlThread::ControlThread(unsigned long tcks, MainWindow *pWind):
     ticks(tcks), taskCount(0), beginnable(false), mainWindow(pWind)
@@ -24,12 +36,37 @@ void ControlThread::releaseToRun()
 	if (signedInCount >= taskCount) {
 		taskCountLock.unlock();
 		lck.unlock();
+		powerLock.lock();
+		powerCount = 0;
+		powerLock.unlock();
 		run();
 		return;
 	}
 	taskCountLock.unlock();
 	go.wait(lck);
 }
+
+void ControlThread::sufficientPower(Processor *pActive)
+{
+       unique_lock<mutex> lck(powerLock);
+       bool statePower = pActive->getTile()->getPowerState();
+       if (!statePower) {
+               lck.unlock();
+               return; //already dark
+       }
+       powerCount++;
+       if (powerCount > POWER_MAX) {
+               lck.unlock();
+               if (!pActive->isInInterrupt()) {
+                       pActive->getTile()->setPowerStateOff();
+               }
+               return; 
+       }
+       lck.unlock();
+       return;
+}
+               
+
 
 void ControlThread::incrementTaskCount()
 {

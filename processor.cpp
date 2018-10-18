@@ -295,6 +295,7 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 		memoryRequest.setWrite();
 	}
 	//wait for response
+	masterTile->setPowerStateOff();
 	if (masterTile->treeLeaf->acceptPacketUp(memoryRequest)) {
 		masterTile->treeLeaf->routePacket(memoryRequest);
 	} else {
@@ -314,6 +315,7 @@ void Processor::transferGlobalToLocal(const uint64_t& address,
 	vector<uint8_t> answer = requestRemoteMemory(size,
 		maskedAddress, get<1>(tlbEntry) +
 		(maskedAddress & bitMask), write);
+	masterTile->setPowerStateOn();
 	for (auto x: answer) {
 		masterTile->writeByte(get<1>(tlbEntry) + offset + 
 			(maskedAddress & bitMask), x);
@@ -330,6 +332,7 @@ void Processor::transferLocalToGlobal(const uint64_t& address,
 	uint64_t maskedAddress = address & BITMAP_MASK;
 	//make the call - ignore the results
 	requestRemoteMemory(size, get<0>(tlbEntry), maskedAddress, true);
+	masterTile->setPowerStateOn();
 }
 
 uint64_t Processor::triggerSmallFault(
@@ -921,6 +924,12 @@ void Processor::start()
 	switchModeVirtual();
 	ControlThread *pBarrier = masterTile->getBarrier();
 	pBarrier->waitForBegin();
+	int jitter = rand() % 257; //pick a prime
+	for (int i = 0; i < jittr; i++){
+		idleTick();
+	}
+	pBarrier->sufficientPower(this);
+	waitATick();
 }	
 
 void Processor::pcAdvance(const long count)
@@ -935,6 +944,12 @@ void Processor::pcAdvance(const long count)
 		programCounter += count;
 		fetchAddressRead(programCounter);
 	}
+}
+
+void Processor::idleTick()
+{
+	ControlThread *pBarrier->masterTile->getBarrier();
+	pBarrier->releaseToRun();
 }
 
 void Processor::setProgramCounter(const uint64_t& address)
@@ -954,6 +969,9 @@ void Processor::waitATick()
 	if (clockDue && inClock == false) {
 		clockDue = false;
 		activateClock();
+	}
+	if (!inInterrupt && masterTile->getPowerState() == false) {
+		waitATick();
 	}
 }
 
@@ -987,6 +1005,7 @@ void Processor::activateClock()
 	if (inInterrupt) {
 		return;
 	}
+	masterTile->setPowerStateOn(); //wake up  
 	inClock = true;
 	uint64_t pages = TILE_MEM_SIZE >> pageShift;
 	interruptBegin();

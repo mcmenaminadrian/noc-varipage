@@ -122,6 +122,7 @@ private:
         	mapToGlobalAddress(const uint64_t& address);
     	void fetchAddressToRegister();
 	void activateClock();
+	void idleTick();
 	//adjust numbers below to change how CLOCK fuctions
     	const uint8_t clockWipe = 1;
     	const uint16_t clockTicks = 1000;
@@ -139,6 +140,7 @@ public:
 	void setPCNull();
 	void start();
 	void pcAdvance(const long count = sizeof(long));
+	bool isInIterrupt() const {return inInterrupt;}
     	uint64_t getRegister(const uint64_t& regNumber) const;
     	void setRegister(const uint64_t& regNumber,
         	const uint64_t& value);
