@@ -18,7 +18,7 @@ using namespace std;
 // 32 cores is 47.5%
 // 50% is 36.57 cores ie 36
 // 75% is 82.28 cores ie 82 cores
-static uint POWER_MAX = 8; //maximum number of active cores
+static uint POWER_MAX = 12; //maximum number of active cores
 
 ControlThread::ControlThread(unsigned long tcks, MainWindow *pWind):
     ticks(tcks), taskCount(0), beginnable(false), mainWindow(pWind)
