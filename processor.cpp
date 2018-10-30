@@ -40,6 +40,7 @@ const static uint64_t STACKPAGES = 2; 	//2 gives 1k stack on 512b paging
 const static uint64_t BITMAPDELAY = 5;	//0 for subcycle bitmap checks
 const static uint64_t FREEPAGES = 25;	//25 for 512b pages, 12 for 1k pages
 const static uint64_t BASEPAGES = 5;	//5 for 512b pages, 3 for 1k pages 
+const static uint64_t DIMMERSWITCH = 7; //7 for standard dim silicon
 
 using namespace std;
 
@@ -252,7 +253,7 @@ uint64_t Processor::generateAddress(const uint64_t& frame,
 	const uint64_t& address) 
 {
 	uint64_t offset = address & bitMask;
-	waitATick();
+	dimSiliconWait();
 	return (frame << pageShift) + offset + PAGESLOCAL;
 }
 
@@ -262,9 +263,9 @@ void Processor::interruptBegin()
 	inInterrupt = true;
 	switchModeReal();
 	for (auto i: registerFile) {
-		waitATick();
+		dimSiliconWait();
 		pushStackPointer();	
-		waitATick();
+		dimSiliconWait();
 		masterTile->writeLong(stackPointer, i);
 	}
 }
@@ -272,9 +273,9 @@ void Processor::interruptBegin()
 void Processor::interruptEnd()
 {
 	for (int i = registerFile.size() - 1; i >= 0; i--) {
-		waitATick();
+		dimSiliconWait();
 		registerFile[i] = masterTile->readLong(stackPointer);
-		waitATick();
+		dimSiliconWait();
 		popStackPointer();
 	}
 	switchModeVirtual();
@@ -349,11 +350,11 @@ uint64_t Processor::triggerSmallFault(
 
 const pair<const uint64_t, bool> Processor::getRandomFrame()
 {
-	waitATick();
+	dimSiliconWait();
 	//See 3.2.1 of Knuth (third edition)
 	//simple ramdom number generator
 	randomPage = (1 * randomPage + 1)%FREEPAGES;
-	waitATick(); //store
+	dimSiliconWait(); //store
 	return pair<const uint64_t, bool>(randomPage + BASEPAGES, true);
 }
 
@@ -388,14 +389,14 @@ const pair<const uint64_t, bool> Processor::getFreeFrame()
 //drop page from TLBs and page tables - no write back
 void Processor::dropPage(const uint64_t& frameNo)
 {
-	waitATick();
+	dimSiliconWait();
 	//firstly get the address
 	const uint64_t pageAddress = masterTile->readLong(
 		frameNo * PAGETABLEENTRY + PAGESLOCAL + VOFFSET +
 		(1 << pageShift)* KERNELPAGES);
 	dumpPageFromTLB(pageAddress);
 	//mark as invalid in page table
-	waitATick();
+	dimSiliconWait();
 	masterTile->writeWord32(frameNo * PAGETABLEENTRY + PAGESLOCAL +
 		FLAGOFFSET + (1 << pageShift) * KERNELPAGES, 0);
 }
@@ -438,7 +439,7 @@ void Processor::writeBackMemory(const uint64_t& frameNo)
 				j < BITMAP_BYTES/sizeof(uint64_t); j++)
 			{
 				//actual transfer done in here
-				waitATick();
+				dimSiliconWait();
 				uint64_t toGo = masterTile->readLong(
 					fetchAddressRead(
 					frameNo * (1 << pageShift) +
@@ -459,9 +460,9 @@ void Processor::fixPageMap(const uint64_t& frameNo,
 	const uint64_t pageAddress = address & pageMask;
 	const uint64_t writeBase =
 		KERNELPAGES * (1 << pageShift) + frameNo * PAGETABLEENTRY;
-	waitATick();
+	dimSiliconWait();
 	localMemory->writeLong(writeBase + VOFFSET, pageAddress);
-	waitATick();
+	dimSiliconWait();
 	if (readOnly) {
 		localMemory->writeWord32(writeBase + FLAGOFFSET, 0x0D);
 	} else {
@@ -609,7 +610,7 @@ const pair<uint64_t, uint8_t>
 	uint64_t superTableIndex =
 		(address48 >> SUPER_TAB_SHIFT) & bit_mask(SUPER_TAB_BL);
 	uint64_t tableIndex = (address48 & bit_mask(TAB_BL)) >> TAB_SHIFT; 
-	waitATick();
+	dimSiliconWait();
 	//read off the superDirectory number
 	//simulate read of global table
 	fetchAddressToRegister();
@@ -619,7 +620,7 @@ const pair<uint64_t, uint8_t>
 		cerr << "Bad SuperDirectory: " << hex << address << endl;
 		throw new bad_exception();
 	}
-	waitATick();
+	dimSiliconWait();
 	fetchAddressToRegister();
 	uint64_t ptrToSuperTable = masterTile->readLong(ptrToDirectory +
 		directoryIndex * (sizeof(uint64_t) + sizeof(uint8_t)));
@@ -627,7 +628,7 @@ const pair<uint64_t, uint8_t>
 		cerr << "Bad Directory: " << hex << address << endl;
 		throw new bad_exception();
 	}
-	waitATick();
+	dimSiliconWait();
 	fetchAddressToRegister();
 	uint64_t ptrToTable = masterTile->readLong(ptrToSuperTable +
 		superTableIndex * (sizeof(uint64_t) + sizeof(uint8_t)));
@@ -635,14 +636,14 @@ const pair<uint64_t, uint8_t>
 		cerr << "Bad SuperTable: " << hex << address << endl;
 		throw new bad_exception();
 	}
-	waitATick();
+	dimSiliconWait();
 	fetchAddressToRegister();
 	pair<uint64_t, uint8_t> globalPageTableEntry(
 		masterTile->readLong(ptrToTable + tableIndex *
 		(sizeof(uint64_t) + sizeof(uint8_t))),
 		masterTile->readByte(ptrToTable + tableIndex *
 		(sizeof(uint64_t) + sizeof(uint8_t)) + sizeof(uint64_t)));
-	waitATick();
+	dimSiliconWait();
 	return globalPageTableEntry;
 }
 
@@ -708,9 +709,9 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
             		y++;
 		}
 		//not in TLB - but check if it is in page table
-		waitATick(); 
+		dimSiliconWait(); 
 		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
-			waitATick();
+			dimSiliconWait();
             		uint64_t addressInPageTable = PAGESLOCAL +
                         	(i * PAGETABLEENTRY) + 
 				(1 << pageShift) * KERNELPAGES;
@@ -720,24 +721,24 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
             		if (!(flags & 0x01)) {
                 		continue;
             		}
-            		waitATick();
+            		dimSiliconWait();
             		uint64_t storedPage = masterTile->readLong(
                         	addressInPageTable + VOFFSET);
-            		waitATick();
+            		dimSiliconWait();
             		if (pageSought == storedPage) {
-                		waitATick();
+                		dimSiliconWait();
                 		flags |= 0x04;
                 		masterTile->writeWord32(
 					addressInPageTable + FLAGOFFSET,
                     			flags);
-                		waitATick();
+                		dimSiliconWait();
                 		fixTLB(i, address);
-                		waitATick();
+                		dimSiliconWait();
                 		return fetchAddressRead(address);
             		}
-			waitATick();
+			dimSiliconWait();
         	}
-        	waitATick();
+        	dimSiliconWait();
         	return triggerHardFault(address, readOnly, write);
 	} else {
 		//what do we do if it's physical address?
@@ -764,10 +765,10 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 				uint32_t oldFlags = masterTile->
 					readWord32(baseAddress + FLAGOFFSET);
 				if (!(oldFlags & 0x08)) {
-					waitATick();	
+					dimSiliconWait();	
 					masterTile->writeWord32(baseAddress +
 						FLAGOFFSET, oldFlags|0x08);
-					waitATick();
+					dimSiliconWait();
 				}
 				for (uint64_t i = 0; i < BITMAPDELAY; i++) {
 					waitATick();
@@ -781,9 +782,9 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			y++;
 		}
 		//not in TLB - but check if it is in page table
-		waitATick();
+		dimSiliconWait();
 		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
-			waitATick();
+			dimSiliconWait();
 			uint64_t addressInPageTable = PAGESLOCAL +
 				(i * PAGETABLEENTRY) +
 				(1 << pageShift) * KERNELPAGES;
@@ -792,23 +793,23 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			if (!(flags & 0x01)) {
 				continue;
 			}
-			waitATick();
+			dimSiliconWait();
 			uint64_t storedPage = masterTile->readLong(
 				addressInPageTable + VOFFSET);
-			waitATick();
+			dimSiliconWait();
 			if (pageSought == storedPage) {
-				waitATick();
+				dimSiliconWait();
 				flags |= 0x04;
 				masterTile->writeWord32(addressInPageTable +
 					FLAGOFFSET, flags);
-				waitATick();
+				dimSiliconWait();
 				fixTLB(i, address);
-				waitATick();
+				dimSiliconWait();
 				return fetchAddressWrite(address);
 			}
-			waitATick();
+			dimSiliconWait();
 		}
-		waitATick();
+		dimSiliconWait();
 		return triggerHardFault(address, readOnly, true);
 	} else {
 		//what do we do if it's physical address?
@@ -957,6 +958,23 @@ void Processor::waitATick()
 	}
 }
 
+void Processor::dimSiliconWait()
+{
+	ControlThread *pBarrier = masterTile->getBarrier();
+	for (int i = 0; i < DIMMERSWITCH; i++) {
+		pBarrier->releaseToRun();
+		totalTicks++;
+		if (!clockDue && totalTicks%clockTicks == 0) {
+			clockDue = true;
+		}
+	}
+	if (clockDue && inClock == false) {
+		clockDue = false;
+		activateClock();
+	}
+}
+
+
 void Processor::waitGlobalTick()
 {
     	for (uint64_t i = 0; i < GLOBALCLOCKSLOW; i++) {
@@ -992,25 +1010,25 @@ void Processor::activateClock()
 	interruptBegin();
 	int wiped = 0;
 	for (uint8_t i = 0; i < pages; i++) {
-		waitATick();
+		dimSiliconWait();
 		uint64_t flagAddress = (1 << pageShift) * KERNELPAGES 
 			+ PAGESLOCAL + FLAGOFFSET +
 			((i + currentTLB) % pagesAvailable) * PAGETABLEENTRY;
 		uint32_t flags = masterTile->readWord32(flagAddress);
-		waitATick();
+		dimSiliconWait();
 		if (!(flags & 0x01) || flags & 0x02) {
 			continue;
 		}
 		flags = flags & (~0x04);
-		waitATick();
+		dimSiliconWait();
 		masterTile->writeWord32(flagAddress, flags);
-		waitATick();
+		dimSiliconWait();
 		get<2>(tlbs[(i + currentTLB) % pagesAvailable]) = false;
 		if (++wiped >= clockWipe){
 			break;
 		}
 	}
-	waitATick();
+	dimSiliconWait();
 	currentTLB = (currentTLB + clockWipe) % pagesAvailable;
 	inClock = false;
 	interruptEnd();
@@ -1018,7 +1036,7 @@ void Processor::activateClock()
 
 void Processor::dumpPageFromTLB(const uint64_t& address)
 {
-	waitATick();
+	dimSiliconWait();
 	uint64_t pageAddress = address & pageMask;
 	for (auto& x: tlbs) {
 		if (get<0>(x) == pageAddress) {

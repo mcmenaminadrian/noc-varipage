@@ -169,6 +169,7 @@ public:
         const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
        		const uint64_t& size);
 	void waitATick();
+	void dimSiliconWait();
 	void waitGlobalTick();
 	Tile* getTile() const { return masterTile; }
    	uint64_t getNumber() { return processorNumber; }
