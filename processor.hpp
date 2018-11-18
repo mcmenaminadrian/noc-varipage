@@ -87,7 +87,7 @@ private:
 	bool isBitmapValid(const uint64_t& address,
 		const uint64_t& physAddress) const;
 	uint64_t generateAddress(const uint64_t& frame,
-	const uint64_t& address) const;
+		const uint64_t& address);
     	uint64_t triggerSmallFault(
         const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
         	const uint64_t& address, const bool& write);
@@ -141,7 +141,7 @@ public:
     	uint64_t getRegister(const uint64_t& regNumber) const;
     	void setRegister(const uint64_t& regNumber,
         	const uint64_t& value);
-	uint8_t getAddress(const uint64_t& address);
+	uint8_t getAddress(const uint64_t& address, const long& count);
     	uint64_t multiplyWithCarry(const uint64_t& A,
         	const uint64_t& B);
     	uint64_t subtractWithCarry(const uint64_t& A,
@@ -161,10 +161,7 @@ public:
     	uint64_t getProgramCounter() const {
         	return programCounter;
     	}
-    	void setProgramCounter(const uint64_t& address) {
-        	programCounter = address;
-        	fetchAddressRead(address, true);
-    	}
+    	void setProgramCounter(const uint64_t& address);
     	void checkCarryBit();
     	void writeBackMemory(const uint64_t& frameNo);
     	void transferLocalToGlobal(const uint64_t& address,
