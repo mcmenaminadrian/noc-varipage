@@ -121,6 +121,7 @@ private:
     	const std::pair<uint64_t, uint8_t>
         	mapToGlobalAddress(const uint64_t& address);
     	void fetchAddressToRegister();
+	void waitInsideClock(ControlThread *pBarrier);
 	void activateClock();
 	void idleTick();
 	//adjust numbers below to change how CLOCK fuctions

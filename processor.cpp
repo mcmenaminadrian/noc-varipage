@@ -969,10 +969,13 @@ void Processor::waitATick()
 	}	
 	if (clockDue && inClock == false) {
 		clockDue = false;
+		//enforce sleeping
+		masterTile->setPowerStateOff();
 		activateClock();
 	}
 	if (!inInterrupt && masterTile->getPowerState() == false) {
 		waitATick();
+		blocks++;
 	}
 }
 
@@ -1001,12 +1004,32 @@ void Processor::popStackPointer()
 	}
 }
 
+void Processor::waitInsideClock(ControlThread *pBarrier)
+{
+	//wait for power to be available
+	pBarrier->releaseToRun();
+	totalTicks++;
+	blocks++;
+}
+	
 void Processor::activateClock()
 {
 	if (inInterrupt) {
 		return;
 	}
-	masterTile->setPowerStateOn(); //wake up  
+	ControlThread *pBarrier = masterTile->getBarrier();
+	waitInsideClock(pBarrier); //allow another process to wake
+	while (true) {
+		if (masterTile->getPowerState() == false) {
+			masterTile->setPowerStateOn();
+		}
+		pBarrier->sufficientPower(this);
+		if (masterTile->getPowerState() == true) {
+			break;
+		} else {
+			waitInsideClock(pBarrier);
+		}
+	}
 	inClock = true;
 	uint64_t pages = TILE_MEM_SIZE >> pageShift;
 	interruptBegin();
