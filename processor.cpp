@@ -40,6 +40,7 @@ const static uint64_t STACKPAGES = 2; 	//2 gives 1k stack on 512b paging
 const static uint64_t BITMAPDELAY = 0;	//0 for subcycle bitmap checks
 const static uint64_t FREEPAGES = 25;	//25 for 512b pages, 12 for 1k pages
 const static uint64_t BASEPAGES = 5;	//5 for 512b pages, 3 for 1k pages 
+const static int POWER_CYCLE_TICKS = 100; //power up and down cost
 
 using namespace std;
 
@@ -295,7 +296,7 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 		memoryRequest.setWrite();
 	}
 	//wait for response
-	masterTile->setPowerStateOff();
+	//masterTile->setPowerStateOff();
 	if (masterTile->treeLeaf->acceptPacketUp(memoryRequest)) {
 		masterTile->treeLeaf->routePacket(memoryRequest);
 	} else {
@@ -315,7 +316,7 @@ void Processor::transferGlobalToLocal(const uint64_t& address,
 	vector<uint8_t> answer = requestRemoteMemory(size,
 		maskedAddress, get<1>(tlbEntry) +
 		(maskedAddress & bitMask), write);
-	masterTile->setPowerStateOn();
+	//masterTile->setPowerStateOn();
 	for (auto x: answer) {
 		masterTile->writeByte(get<1>(tlbEntry) + offset + 
 			(maskedAddress & bitMask), x);
@@ -332,7 +333,7 @@ void Processor::transferLocalToGlobal(const uint64_t& address,
 	uint64_t maskedAddress = address & BITMAP_MASK;
 	//make the call - ignore the results
 	requestRemoteMemory(size, get<0>(tlbEntry), maskedAddress, true);
-	masterTile->setPowerStateOn();
+	//masterTile->setPowerStateOn();
 }
 
 uint64_t Processor::triggerSmallFault(
@@ -928,16 +929,20 @@ void Processor::start()
 	for (int i = 0; i < jitter; i++){
 		idleTick();
 	}
-	pBarrier->sufficientPower(this);
 	waitATick();
 }	
 
 void Processor::pcAdvance(const long count)
 {
+	bool status = false; 
+	bool waiting = false;
 	if (count < 2) {
 		return;
 	}
-	masterTile->getBarrier()->sufficientPower(this);	
+	while (!status)
+		status = masterTile->getBarrier()->powerToProceed(this, waiting);
+		waiting = true;
+	}	
 	//check if we are going over a boundary
 	uint position = programCounter % BITMAP_BYTES;
 	uint updatePosition = (programCounter + count - 1) % BITMAP_BYTES;
@@ -971,8 +976,14 @@ void Processor::waitATick()
 		clockDue = false;
 		activateClock();
 	}
-	if (!inInterrupt && masterTile->getPowerState() == false) {
-		waitATick();
+}
+
+void Processor::powerCycleTick()
+{
+	if (int i = 0; i < POWER_CYCLE_TICKS; i++) {
+		ControlThread *pBarrier = masterTile->getBarrier();
+		pBarrier->releaseToRun();
+		totalTicks++;
 	}
 }
 
@@ -1006,7 +1017,11 @@ void Processor::activateClock()
 	if (inInterrupt) {
 		return;
 	}
-	masterTile->setPowerStateOn(); //wake up  
+	bool powerState = masterTile->getPowerState();
+	if (!powerState) {
+		masterTile->switchOnCore(this);
+		powerCycleTick();
+	}		
 	inClock = true;
 	uint64_t pages = TILE_MEM_SIZE >> pageShift;
 	interruptBegin();
@@ -1034,6 +1049,10 @@ void Processor::activateClock()
 	currentTLB = (currentTLB + clockWipe) % pagesAvailable;
 	inClock = false;
 	interruptEnd();
+	if (powerState) {
+		masterTile->switchOffCore(this);
+		powerCycleTick();
+	}
 }
 
 void Processor::dumpPageFromTLB(const uint64_t& address)

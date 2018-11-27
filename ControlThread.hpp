@@ -3,6 +3,7 @@
 #include <mutex>
 #include <thread>
 #include <condition_variable>
+#include <deque>
 #include "mainwindow.h"
 
 #ifndef __CONTROLTHREAD_
@@ -30,6 +31,7 @@ private:
 	std::mutex cheatLock;
 	std::mutex powerLock;
 	MainWindow *mainWindow;
+	std::deque<uint64_t> waitingProcessors;
 	void run();
 
 public:
