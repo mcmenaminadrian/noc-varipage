@@ -939,7 +939,7 @@ void Processor::pcAdvance(const long count)
 	if (count < 2) {
 		return;
 	}
-	while (!status)
+	while (!status) {
 		status = masterTile->getBarrier()->powerToProceed(this, waiting);
 		waiting = true;
 	}	
@@ -969,18 +969,20 @@ void Processor::waitATick()
 	ControlThread *pBarrier = masterTile->getBarrier();
 	pBarrier->releaseToRun();
 	totalTicks++;
-	if (totalTicks%clockTicks == 0) {
-		clockDue = true;
-	}	
-	if (clockDue && inClock == false) {
-		clockDue = false;
-		activateClock();
+	if (getTile()->getPowerState()) {
+		if (totalTicks%clockTicks == 0) {
+			clockDue = true;
+		}	
+		if (clockDue && inClock == false) {
+			clockDue = false;
+			activateClock();
+		}
 	}
 }
 
 void Processor::powerCycleTick()
 {
-	if (int i = 0; i < POWER_CYCLE_TICKS; i++) {
+	for (int i = 0; i < POWER_CYCLE_TICKS; i++) {
 		ControlThread *pBarrier = masterTile->getBarrier();
 		pBarrier->releaseToRun();
 		totalTicks++;
@@ -1019,8 +1021,7 @@ void Processor::activateClock()
 	}
 	bool powerState = masterTile->getPowerState();
 	if (!powerState) {
-		masterTile->switchOnCore(this);
-		powerCycleTick();
+		return;
 	}		
 	inClock = true;
 	uint64_t pages = TILE_MEM_SIZE >> pageShift;
@@ -1050,8 +1051,10 @@ void Processor::activateClock()
 	inClock = false;
 	interruptEnd();
 	if (powerState) {
-		masterTile->switchOffCore(this);
+		ControlThread *pBarrier = masterTile->getBarrier();
+		pBarrier->switchOffCore(this);
 		powerCycleTick();
+		masterTile->setPowerStateOff();
 	}
 }
 

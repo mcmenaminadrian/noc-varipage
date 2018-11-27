@@ -125,7 +125,7 @@ private:
 	void idleTick();
 	//adjust numbers below to change how CLOCK fuctions
     	const uint8_t clockWipe = 1;
-    	const uint16_t clockTicks = 1000;
+    	const uint16_t clockTicks = 3000;
 	uint64_t totalTicks;
 	uint64_t currentTLB;
 
@@ -179,6 +179,7 @@ public:
     	void dropPage(const uint64_t& frameNo);
     	void dumpPageFromTLB(const uint64_t& address);
     	const uint64_t& getTicks() const { return totalTicks; }
+	void powerCycleTick();
 	void incrementBlocks();
         void incrementServiceTime();
         void resetCounters();

@@ -45,6 +45,10 @@ public:
 	bool tryCheatLock();
 	void unlockCheatLock();
 	void sufficientPower(Processor *p);
+	bool checkQueue(const uint64_t number);
+	bool powerToProceed(Processor *p, const bool waiting);
+	void switchOffCore(Processor *p);
+
 };
 
 #endif

@@ -78,7 +78,7 @@ bool ControlThread::checkQueue(const uint64_t procNumber)
 	return false;
 }
 
-bool ControlThread::powerToProceed(Processor *pActive, bool waiting)
+bool ControlThread::powerToProceed(Processor *pActive, const bool waiting)
 {
 	unique_lock<mutex> lck(powerLock);
 	bool status = checkQueue(pActive->getNumber());
@@ -93,7 +93,6 @@ bool ControlThread::powerToProceed(Processor *pActive, bool waiting)
 	}
 	return false;
 }
-               
 
 
 void ControlThread::incrementTaskCount()
@@ -153,7 +152,7 @@ void ControlThread::begin()
 {
 	runLock.lock();
 	for (uint64_t i = 0; i < taskCount; i++) {
-		waitingProcessors.push(i);
+		waitingProcessors.push_back(i);
 	}
 	beginnable = true;
 	go.notify_all();
@@ -168,4 +167,12 @@ bool ControlThread::tryCheatLock()
 void ControlThread::unlockCheatLock()
 {
 	cheatLock.unlock();
+}
+
+void ControlThread::switchOffCore(Processor *p)
+{
+	unique_lock<mutex> lck(powerLock);
+	waitingProcessors.push_back(p->getNumber());
+	waitingProcessors.pop_front();
+	lck.unlock();
 }
