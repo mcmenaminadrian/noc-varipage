@@ -22,7 +22,7 @@ static uint POWER_MAX = 36; //maximum number of active cores
 
 ControlThread::ControlThread(unsigned long tcks, MainWindow *pWind):
     ticks(tcks), taskCount(0), beginnable(false), mainWindow(pWind),
-	waitingProcessors()
+	waitingProcessors(0)
 {
 	QObject::connect(this, SIGNAL(updateCycles()),
 		pWind, SLOT(updateLCD()));
@@ -37,9 +37,6 @@ void ControlThread::releaseToRun()
 	if (signedInCount >= taskCount) {
 		taskCountLock.unlock();
 		lck.unlock();
-		powerLock.lock();
-		powerCount = 0;
-		powerLock.unlock();
 		run();
 		return;
 	}
@@ -47,29 +44,10 @@ void ControlThread::releaseToRun()
 	go.wait(lck);
 }
 
-void ControlThread::sufficientPower(Processor *pActive)
-{
-       unique_lock<mutex> lck(powerLock);
-       bool statePower = pActive->getTile()->getPowerState();
-       if (!statePower) {
-               lck.unlock();
-               return; //already dark
-       }
-       powerCount++;
-       if (powerCount > POWER_MAX) {
-               lck.unlock();
-               if (!pActive->isInInterrupt()) {
-                       pActive->getTile()->setPowerStateOff();
-               }
-               return; 
-       }
-       lck.unlock();
-       return;
-}
-
 bool ControlThread::checkQueue(const uint64_t procNumber)
 {
-	deque<uint64_t>::iterator it = waitingProcessors.begin();
+	//called with powerLock held
+	deque<int>::iterator it = waitingProcessors.begin();
 	while (it != waitingProcessors.end()) {
 		if (*it++ == procNumber) {
 			return true;
@@ -106,8 +84,8 @@ void ControlThread::decrementTaskCount()
 	unique_lock<mutex> lck(runLock);
 	unique_lock<mutex> lock(taskCountLock);
 	taskCount--;
-    lock.unlock();
-    lck.unlock();
+	lock.unlock();
+	lck.unlock();
 	if (signedInCount >= taskCount) {
 		run();
 	}
@@ -143,17 +121,17 @@ void ControlThread::waitForBegin()
 {
 	unique_lock<mutex> lck(runLock);
 	go.wait(lck, [&]() { return this->beginnable;});
-	for (int i = 0; i < POWER_MAX; i++) {
-		waitingProcessors.pop_front();
-	}
 }
 
 void ControlThread::begin()
 {
 	runLock.lock();
-	for (uint64_t i = 0; i < taskCount; i++) {
+	unique_lock<mutex> lck(powerLock);
+	for (uint64_t i = 0; i < taskCount - POWER_MAX ; i++) {
 		waitingProcessors.push_back(i);
 	}
+	lck.unlock();
+	cout << "Length: " << waitingProcessors.size() << endl;
 	beginnable = true;
 	go.notify_all();
 	runLock.unlock();

@@ -31,7 +31,7 @@ private:
 	std::mutex cheatLock;
 	std::mutex powerLock;
 	MainWindow *mainWindow;
-	std::deque<uint64_t> waitingProcessors;
+	std::deque<int> waitingProcessors;
 	void run();
 
 public:
