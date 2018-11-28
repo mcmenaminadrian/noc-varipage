@@ -131,7 +131,6 @@ void ControlThread::begin()
 		waitingProcessors.push_back(i);
 	}
 	lck.unlock();
-	cout << "Length: " << waitingProcessors.size() << endl;
 	beginnable = true;
 	go.notify_all();
 	runLock.unlock();

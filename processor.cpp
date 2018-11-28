@@ -296,7 +296,6 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 		memoryRequest.setWrite();
 	}
 	//wait for response
-	//masterTile->setPowerStateOff();
 	if (masterTile->treeLeaf->acceptPacketUp(memoryRequest)) {
 		masterTile->treeLeaf->routePacket(memoryRequest);
 	} else {
@@ -316,7 +315,6 @@ void Processor::transferGlobalToLocal(const uint64_t& address,
 	vector<uint8_t> answer = requestRemoteMemory(size,
 		maskedAddress, get<1>(tlbEntry) +
 		(maskedAddress & bitMask), write);
-	//masterTile->setPowerStateOn();
 	for (auto x: answer) {
 		masterTile->writeByte(get<1>(tlbEntry) + offset + 
 			(maskedAddress & bitMask), x);
@@ -333,7 +331,6 @@ void Processor::transferLocalToGlobal(const uint64_t& address,
 	uint64_t maskedAddress = address & BITMAP_MASK;
 	//make the call - ignore the results
 	requestRemoteMemory(size, get<0>(tlbEntry), maskedAddress, true);
-	//masterTile->setPowerStateOn();
 }
 
 uint64_t Processor::triggerSmallFault(
@@ -929,7 +926,13 @@ void Processor::start()
 	for (int i = 0; i < jitter; i++){
 		idleTick();
 	}
-	waitATick();
+	bool status = false;
+	bool waiting = false;
+	while (!status) {
+		status = masterTile->getBarrier()->powerToProceed(this, waiting);
+		waiting = true;
+	}
+	masterTile->setPowerStateOn();
 }	
 
 void Processor::pcAdvance(const long count)
@@ -942,7 +945,8 @@ void Processor::pcAdvance(const long count)
 	while (!status) {
 		status = masterTile->getBarrier()->powerToProceed(this, waiting);
 		waiting = true;
-	}	
+	}
+	masterTile->setPowerStateOn();
 	//check if we are going over a boundary
 	uint position = programCounter % BITMAP_BYTES;
 	uint updatePosition = (programCounter + count - 1) % BITMAP_BYTES;
