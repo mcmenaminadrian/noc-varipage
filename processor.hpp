@@ -130,6 +130,7 @@ private:
 	bool sliceDue;
 	uint64_t totalTicks;
 	uint64_t currentTLB;
+	uint64_t sliceTicks;
 
 public:
 	std::bitset<16> statusWord;

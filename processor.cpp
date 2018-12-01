@@ -41,7 +41,6 @@ const static uint64_t BITMAPDELAY = 0;	//0 for subcycle bitmap checks
 const static uint64_t FREEPAGES = 25;	//25 for 512b pages, 12 for 1k pages
 const static uint64_t BASEPAGES = 5;	//5 for 512b pages, 3 for 1k pages 
 const static int POWER_CYCLE_TICKS = 100; //power up and down cost
-const static int TIME_SLICE = 250; //even faster surrender
 
 using namespace std;
 
@@ -59,7 +58,7 @@ Processor::Processor(Tile *parent, MainWindow *mW, uint64_t numb):
 	inInterrupt = false;
     	processorNumber = numb;
     	clockDue = false;
-	sliceDue = false;
+	sliceTicks = 0;
     	QObject::connect(this, SIGNAL(hardFault()),
         	mW, SLOT(updateHardFaults()));
     	QObject::connect(this, SIGNAL(smallFault()),
@@ -72,6 +71,7 @@ void Processor::resetCounters()
 	smallFaultCount = 0;
 	blocks = 0;
 	serviceTime = 0;
+	sliceTicks = 0;
 }
 
 void Processor::setMode()
@@ -976,20 +976,15 @@ void Processor::waitATick()
 	pBarrier->releaseToRun();
 	totalTicks++;
 	if (getTile()->getPowerState()) {
-		if (totalTicks%clockTicks == 0) {
+		sliceTicks++;
+		if (sliceTicks%clockTicks == 0) {
 			clockDue = true;
-			sliceDue = false;
-		} else if (!clockDue && totalTicks%TIME_SLICE == 0) {
-			sliceDue = true;
-		}	
+		} 
 		if (clockDue && inClock == false) {
+			sliceTicks = 0;
 			clockDue = false;
 			activateClock();
-		} else if (sliceDue && inClock == false) {
-			sliceDue = false;
-			surrenderSlice();
-		}
-		
+		} 
 	}
 }
 
@@ -1066,19 +1061,6 @@ void Processor::activateClock()
 	ControlThread *pBarrier = masterTile->getBarrier();
 	pBarrier->switchOffCore(this);
 	powerCycleTick();
-	masterTile->setPowerStateOff();
-}
-
-void Processor::surrenderSlice()
-{
-	bool powerState = masterTile->getPowerState();
-	if (!powerState) {
-		return;
-	}
-	//just go dark - not an interrupt
-	ControlThread *pBarrier = masterTile->getBarrier();
-	pBarrier->switchOffCore(this);
-	powerCycleTick();	
 	masterTile->setPowerStateOff();
 }
 
