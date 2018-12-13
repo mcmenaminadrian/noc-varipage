@@ -33,11 +33,15 @@ Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
 	//root bus - connects to global memory
 	nodesTree.push_back(bus(levels, &globalMemory);
 	nodesTree[levels][0].assignGlobalMemory(&globalMemory);
-	nodesTree[levels][0].upstreamBus = -1;
+	nodesTree[levels][0].upstreamBus = nullptr;
 	nodesTree[levels][0].addMMUMutex();
 	//initialise the mutexes
 	for (unsigned int i = 0; i < nodesTree.size(); i++) {
 			nodesTree[i].initialiseMutex();
+			if (i < levels) {
+				nodesTree[i][0].upstreamBus = 
+					& nodesTree[i + 1][0]; 
+			}
 	}
 
 	//attach root to global memory

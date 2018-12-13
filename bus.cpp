@@ -19,6 +19,11 @@ using namespace std;
 #define WRITE_FACTOR 2
 
 
+Bus::Bus(const int deck, Memory& global):level(deck)
+{
+	globalMemory = global;
+}
+
 Bus::~Bus()
 {
 	disarmMutex();
@@ -41,22 +46,30 @@ void Bus::initialiseMutex()
 	gateMutex = new mutex();
 }
 
-bool Bus::acceptPacketUp(const MemoryPacket& mPack) const
-{
-	if (!mPack.goingUp()) {
-		cerr << "Routing memory packet in wrong direction" << endl;
-		return false;
-	}
-	if (!globalMemory) {
-		cerr << "Mux has no global memory assigned" << endl;
-		return false;
-	}
-	return (globalMemory->inRange(mPack.getRemoteAddress()));
-}
-
-void Bus::fillBottomBuffer(bool& buffer, mutex *gMutex,
+void Bus::fillNextBuffer(bool& buffer, mutex *gMutex,
 	MemoryPacket& packet)
 {
+	if (levels == 0) {
+		//backoff
+		int backOff = 0;
+		while (true) {
+			packet.getProcessor()->waitGlobalTick();
+			gMutex->lock();
+			if (buffer == false) {
+				buffer = true;
+				gMutex->unlock();
+				return;
+			}
+			gMutex->unlock();
+			for (int i = 0; i < (1 << backOff); i++) {
+				packet.getProcessor()->waitGlobalTick();
+				packet.getProcessor()->incrementBlocks();
+			}
+			backOff = (backOff++) % 8;
+			packet.getProcessor()->incrementBlocks();
+		}
+	}
+		
 	while (true) {
 		packet.getProcessor()->waitGlobalTick();
 		gMutex->lock();
@@ -335,34 +348,6 @@ void Mux::postPacketUp(MemoryPacket& packet)
 		bottomLeftMutex->unlock();
 		packet.getProcessor()->incrementBlocks();
 	}
-}
-
-void Mux::routePacket(MemoryPacket& packet)
-{
-	const uint64_t processorIndex = packet.getProcessor()->
-		getTile()->getOrder();
-	if (processorIndex >= lowerLeft.first &&
-		processorIndex <= lowerLeft.second) {
-		fillBottomBuffer(leftBuffer, bottomLeftMutex,
-			packet);
-	} else {
-		fillBottomBuffer(rightBuffer, bottomRightMutex,
-			packet);
-	}
-	return postPacketUp(packet);
-}
-
-void Mux::joinUpMux(const Mux& left, const Mux& right)
-{
-	assignNumbers(left.lowerLeft.first, left.lowerRight.second,
-		right.lowerLeft.first, right.lowerRight.second);
-}
-
-void Mux::assignNumbers(const uint64_t& ll, const uint64_t& ul,
-	const uint64_t& lr, const uint64_t& ur)
-{
-	lowerLeft = pair<uint64_t, uint64_t>(ll, ul);
-	lowerRight = pair<uint64_t, uint64_t>(lr, ur);
 }
 
 void Mux::addMMUMutex()
