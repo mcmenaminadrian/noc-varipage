@@ -15,7 +15,7 @@
 #include "mainwindow.h"
 #include "ControlThread.hpp"
 #include "memorypacket.hpp"
-#include "mux.hpp"
+#include "bus.hpp"
 #include "tile.hpp"
 #include "memory.hpp"
 #include "processor.hpp"

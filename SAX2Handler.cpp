@@ -8,7 +8,7 @@
 #include <xercesc/sax2/Attributes.hpp>
 #include <mutex>
 #include "memorypacket.hpp"
-#include "mux.hpp"
+#include "bus.hpp"
 #include "ControlThread.hpp"
 #include "tile.hpp"
 #include "processor.hpp"
