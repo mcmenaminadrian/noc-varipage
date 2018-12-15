@@ -2,13 +2,13 @@
 #define _TREE_CLASS_
 
 class Noc;
-class Mux;
+class Bus;
 class Memory;
 
 class Tree {
 
 private:
-	std::vector<std::vector<Mux>> nodesTree;
+	std::vector<Bus> nodesTree;
 	long levels;
 	
 

@@ -29,9 +29,7 @@ void Bus::disarmMutex()
 {
 	delete gateMutex;
 	gateMutex = nullptr;
-	if (mmuMutex) {
-        	delete mmuMutex;
-        	mmuMutex = nullptr;
+	if (acceptedMutex) {
 		delete acceptedMutex;
 		acceptedMutex = nullptr;
     	}

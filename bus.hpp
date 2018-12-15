@@ -14,8 +14,6 @@ class Bus {
 private:
 	Memory* globalMemory;
 	bool buffer;
-	std::mutex *mmuMutex;
-        std::unique_lock<std::mutex> mmuLock;
 	void disarmMutex();
 	std::mutex *gateMutex;
 	std::mutex *acceptedMutex;
@@ -25,10 +23,11 @@ private:
 public:
 	Bus* upstreamBus;
 	Bus* downstreamBus;
-	Bus(const int deck, Memory& global):  buffer(false), level(deck), 
-            gateMutex(nullptr), acceptedMutex(nullptr),
-	    acceptedPackets(0), globalMemory(&global),
-            upstreamBus(nullptr){};
+	Bus(const int deck, Memory* global):  buffer(false),
+		gateMutex(nullptr), acceptedMutex(nullptr),
+		acceptedPackets(0),
+		upstreamBus(nullptr), level(deck), globalMemory(global)
+	{};
 	~Bus();
 	void initialiseMutex();
 	void fillNextBuffer(MemoryPacket& packet);

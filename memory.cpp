@@ -116,7 +116,7 @@ bool Memory::inRange(const uint64_t& address) const
 	return (address <= (start + memorySize - 1) && address >= start);
 }
 
-void Memory::attachTree(Mux* root)
+void Memory::attachTree(Bus* root)
 {
-	rootMux = root;
+	rootBus = root;
 }

@@ -41,7 +41,7 @@ void Tile::addConnection(const long col, const long row)
 	connections.push_back(pair<long, long>(col, row));
 }
 
-void Tile::addTreeLeaf(Mux *leaf)
+void Tile::addTreeLeaf(Bus *leaf)
 {
 	treeLeaf = leaf;
 }

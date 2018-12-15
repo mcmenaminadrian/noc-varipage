@@ -7,7 +7,7 @@
 #include "mainwindow.h"
 #include "ControlThread.hpp"
 #include "memorypacket.hpp"
-#include "mux.hpp"
+#include "bus.hpp"
 #include "memory.hpp"
 #include "tree.hpp"
 #include "noc.hpp"
@@ -25,25 +25,21 @@ Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
 
 	//create the nodes
 	while (busCount > 1) {
-		nodesTree.push_back(bus(levels, &globalMemory));
-		muxCount /= 2;
+		nodesTree.push_back(Bus(levels, &globalMemory));
 		levels++;
 	}
 	//number the leaves
 	//root bus - connects to global memory
-	nodesTree.push_back(bus(levels, &globalMemory);
-	nodesTree[levels][0].assignGlobalMemory(&globalMemory);
-	nodesTree[levels][0].upstreamBus = nullptr;
-	nodesTree[levels][0].addMMUMutex();
+	nodesTree.push_back(Bus(levels, &globalMemory));
+	nodesTree[levels].assignGlobalMemory(&globalMemory);
+	nodesTree[levels].upstreamBus = nullptr;
 	//initialise the mutexes
-	for (unsigned int i = 0; i < nodesTree.size(); i++) {
+	for (unsigned int i = 0; i < nodesTree.size() - 1; i++) {
 			nodesTree[i].initialiseMutex();
-			if (i < levels) {
-				nodesTree[i][0].upstreamBus = 
-					& nodesTree[i + 1][0]; 
-			}
+			nodesTree[i].upstreamBus = 
+				& nodesTree[i + 1]; 
 	}
 
 	//attach root to global memory
-	globalMemory.attachTree(&(nodesTree.at(nodesTree.size() - 1)[0]));
+	globalMemory.attachTree(&(nodesTree.at(nodesTree.size() - 1)));
 }
