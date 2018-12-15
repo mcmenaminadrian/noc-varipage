@@ -19,32 +19,24 @@ private:
 	void disarmMutex();
 	std::mutex *gateMutex;
 	std::mutex *acceptedMutex;
-	bool gate;
 	uint64_t acceptedPackets;
+	uint level;
 
 public:
 	Bus* upstreamBus;
 	Bus* downstreamBus;
 	Bus(const int deck, Memory& global):  buffer(false), level(deck), 
-            mmuMutex(nullptr), gateMutex(nullptr), acceptedMutex(nullptr),
-	    acceptedPackets(0), gate(false), globalMemory(global),
+            gateMutex(nullptr), acceptedMutex(nullptr),
+	    acceptedPackets(0), globalMemory(&global),
             upstreamBus(nullptr){};
 	~Bus();
 	void initialiseMutex();
-	void fillBottomBuffer(bool& buffer,
-		std::mutex *botMutex, MemoryPacket& packet);
+	void fillNextBuffer(MemoryPacket& packet);
 	void routeDown(MemoryPacket& packet);
 	void assignGlobalMemory(Memory *gMem){ globalMemory = gMem; }
-	void joinUpMux(const Mux& left, const Mux& right);
-	void assignNumbers(const uint64_t& ll, const uint64_t& ul,
-		const uint64_t& lr, const uint64_t& ur);
-	const std::tuple<const uint64_t, const uint64_t,
-		const uint64_t, const uint64_t> fetchNumbers() const;
 	void routePacket(MemoryPacket& pack);
-    	bool acceptPacketUp(const MemoryPacket& mPack) const;
 	void postPacketUp(MemoryPacket& packet);
 	void keepRoutingPacket(MemoryPacket& packet);
-    void addMMUMutex();
 
 };	
 #endif

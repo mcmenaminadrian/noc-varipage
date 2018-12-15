@@ -20,7 +20,7 @@ SOURCES += main.cpp\
     ControlThread.cpp \
     memory.cpp \
     memorypacket.cpp \
-    mux.cpp \
+    bus.cpp \
     noc.cpp \
     numberpage.cpp \
     paging.cpp \
@@ -34,7 +34,7 @@ HEADERS  += mainwindow.h \
     ControlThread.hpp \
     memory.hpp \
     memorypacket.hpp \
-    mux.hpp \
+    bus.hpp \
     noc.hpp \
     paging.hpp \
     processor.hpp \

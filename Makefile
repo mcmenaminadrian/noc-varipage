@@ -53,7 +53,7 @@ SOURCES       = main.cpp \
 		ControlThread.cpp \
 		memory.cpp \
 		memorypacket.cpp \
-		mux.cpp \
+		bus.cpp \
 		noc.cpp \
 		numberpage.cpp \
 		paging.cpp \
@@ -69,7 +69,7 @@ OBJECTS       = main.o \
 		ControlThread.o \
 		memory.o \
 		memorypacket.o \
-		mux.o \
+		bus.o \
 		noc.o \
 		numberpage.o \
 		paging.o \
@@ -142,7 +142,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		ControlThread.hpp \
 		memory.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		noc.hpp \
 		paging.hpp \
 		processor.hpp \
@@ -154,7 +154,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		ControlThread.cpp \
 		memory.cpp \
 		memorypacket.cpp \
-		mux.cpp \
+		bus.cpp \
 		noc.cpp \
 		numberpage.cpp \
 		paging.cpp \
@@ -330,8 +330,8 @@ dist: distdir FORCE
 distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
-	$(COPY_FILE) --parents mainwindow.h ControlThread.hpp memory.hpp memorypacket.hpp mux.hpp noc.hpp paging.hpp processor.hpp SAX2Handler.hpp xmlFunctor.hpp tile.hpp tree.hpp $(DISTDIR)/
-	$(COPY_FILE) --parents main.cpp mainwindow.cpp ControlThread.cpp memory.cpp memorypacket.cpp mux.cpp noc.cpp numberpage.cpp paging.cpp processor.cpp SAX2Handler.cpp xmlFunctor.cpp tile.cpp tree.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents mainwindow.h ControlThread.hpp memory.hpp memorypacket.hpp bus.hpp noc.hpp paging.hpp processor.hpp SAX2Handler.hpp xmlFunctor.hpp tile.hpp tree.hpp $(DISTDIR)/
+	$(COPY_FILE) --parents main.cpp mainwindow.cpp ControlThread.cpp memory.cpp memorypacket.cpp bus.cpp noc.cpp numberpage.cpp paging.cpp processor.cpp SAX2Handler.cpp xmlFunctor.cpp tile.cpp tree.cpp $(DISTDIR)/
 	$(COPY_FILE) --parents mainwindow.ui $(DISTDIR)/
 
 
@@ -368,7 +368,7 @@ moc_ControlThread.cpp: mainwindow.h \
 moc_processor.cpp: mainwindow.h \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		tile.hpp \
 		memory.hpp \
 		processor.hpp
@@ -399,7 +399,7 @@ mainwindow.o: mainwindow.cpp mainwindow.h \
 		ui_mainwindow.h \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		noc.hpp \
 		tile.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o mainwindow.o mainwindow.cpp
@@ -410,27 +410,27 @@ ControlThread.o: ControlThread.cpp mainwindow.h \
 
 memory.o: memory.cpp tree.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		memory.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o memory.o memory.cpp
 
 memorypacket.o: memorypacket.cpp memorypacket.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o memorypacket.o memorypacket.cpp
 
-mux.o: mux.cpp mainwindow.h \
+bus.o: bus.cpp mainwindow.h \
 		memorypacket.hpp \
 		memory.hpp \
 		ControlThread.hpp \
 		tile.hpp \
 		processor.hpp \
-		mux.hpp
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o mux.o mux.cpp
+		bus.hpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o bus.o bus.cpp
 
 noc.o: noc.cpp mainwindow.h \
 		memory.hpp \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		noc.hpp \
 		tile.hpp \
 		tree.hpp \
@@ -449,14 +449,14 @@ paging.o: paging.cpp memory.hpp \
 processor.o: processor.cpp mainwindow.h \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		tile.hpp \
 		memory.hpp \
 		processor.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o processor.o processor.cpp
 
 SAX2Handler.o: SAX2Handler.cpp memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		ControlThread.hpp \
 		mainwindow.h \
 		tile.hpp \
@@ -469,7 +469,7 @@ SAX2Handler.o: SAX2Handler.cpp memorypacket.hpp \
 xmlFunctor.o: xmlFunctor.cpp mainwindow.h \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		noc.hpp \
 		memory.hpp \
 		tile.hpp \
@@ -481,7 +481,7 @@ xmlFunctor.o: xmlFunctor.cpp mainwindow.h \
 tile.o: tile.cpp mainwindow.h \
 		ControlThread.hpp \
 		memorypacket.hpp \
-		mux.hpp \
+		bus.hpp \
 		memory.hpp \
 		tile.hpp \
 		processor.hpp \
@@ -496,7 +496,8 @@ tree.o: tree.cpp mainwindow.h \
 		tree.hpp \
 		noc.hpp \
 		tile.hpp \
-		processor.hpp
+		processor.hpp \
+		bus.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o tree.o tree.cpp
 
 moc_mainwindow.o: moc_mainwindow.cpp 

@@ -10,9 +10,9 @@
 #include "memorypacket.hpp"
 #include "memory.hpp"
 #include "ControlThread.hpp"
+#include "bus.hpp"
 #include "tile.hpp"
 #include "processor.hpp"
-#include "bus.hpp"
 
 using namespace std;
 
@@ -50,7 +50,7 @@ void Bus::routePacket(MemoryPacket& memoryRequest)
 
 void Bus::fillNextBuffer(MemoryPacket& packet)
 {
-	if (levels == 0) {
+	if (level == 0) {
 		//backoff
 		int backOff = 0;
 		while (true) {
@@ -61,7 +61,7 @@ void Bus::fillNextBuffer(MemoryPacket& packet)
 				gateMutex->unlock();
 				return;
 			}
-			gMutex->unlock();
+			gateMutex->unlock();
 			for (int i = 0; i < (1 << backOff); i++) {
 				packet.getProcessor()->waitGlobalTick();
 				packet.getProcessor()->incrementBlocks();
@@ -73,7 +73,7 @@ void Bus::fillNextBuffer(MemoryPacket& packet)
 		
 	while (true) {
 		packet.getProcessor()->waitGlobalTick();
-		gMutex->lock();
+		gateMutex->lock();
 		if (buffer == false) {
 			buffer = true;
 			gateMutex->unlock();
@@ -88,7 +88,7 @@ void Bus::routeDown(MemoryPacket& packet)
 {
 
 	while (true) {
-		packet.getProcessor->waitGlobalTick();
+		packet.getProcessor()->waitGlobalTick();
 		acceptedMutex->lock();
 		if (acceptedPackets < 4) {
 			gateMutex->lock();
@@ -130,7 +130,7 @@ void Bus::routeDown(MemoryPacket& packet)
 
 void Bus::keepRoutingPacket(MemoryPacket& packet)
 {
-	if (upstreamMux == nullptr) {
+	if (upstreamBus == nullptr) {
 		return routeDown(packet);	
 	} else {
 		return postPacketUp(packet);
@@ -141,16 +141,16 @@ void Bus::postPacketUp(MemoryPacket& packet)
 {
 	while (true) {	
 		packet.getProcessor()->waitGlobalTick();
-		upstreamBus->gateMutex.lock();
-		if (upstreamBus.buffer == false) {
-			upstreamBus.buffer = true;
-			upstreamBus->gateMutex.unlock();
+		upstreamBus->gateMutex->lock();
+		if (upstreamBus->buffer == false) {
+			upstreamBus->buffer = true;
+			upstreamBus->gateMutex->unlock();
 			gateMutex->lock();
 			buffer = false;
 			gateMutex->unlock();
 			return upstreamBus->keepRoutingPacket(packet);
 		}
-		upstreamBus->unlock();
+		upstreamBus->gateMutex->unlock();
 		packet.getProcessor()->incrementBlocks();
 	}		
 }
