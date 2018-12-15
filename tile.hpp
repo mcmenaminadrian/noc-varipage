@@ -20,9 +20,9 @@ public:
     	Tile(Noc* parent, const long col, const long r, const long pShift,
         	MainWindow *mW, uint64_t numb);
 	~Tile();
-	Mux *treeLeaf;
+	Bus *treeLeaf;
 	Processor *tileProcessor;
-	void addTreeLeaf(Mux* leaf);
+	void addTreeLeaf(Bus* leaf);
 	void addConnection(const long col, const long row);
     	unsigned long getOrder() const;
     	long getRow() const {return coordinates.second;}

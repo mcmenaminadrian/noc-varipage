@@ -295,12 +295,7 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 		memoryRequest.setWrite();
 	}
 	//wait for response
-	if (masterTile->treeLeaf->acceptPacketUp(memoryRequest)) {
-		masterTile->treeLeaf->routePacket(memoryRequest);
-	} else {
-		cerr << "FAILED" << endl;
-		exit(1);
-	}
+	masterTile->treeLeaf->routePacket(memoryRequest);
 	return memoryRequest.getMemory();
 }
 

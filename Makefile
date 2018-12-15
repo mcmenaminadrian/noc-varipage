@@ -48,7 +48,7 @@ SOURCES       = main.cpp \
 		ControlThread.cpp \
 		memory.cpp \
 		memorypacket.cpp \
-		mux.cpp \
+		bus.cpp \
 		noc.cpp \
 		numberpage.cpp \
 		paging.cpp \
@@ -64,7 +64,7 @@ OBJECTS       = main.o \
 		ControlThread.o \
 		memory.o \
 		memorypacket.o \
-		mux.o \
+		bus.o \
 		noc.o \
 		numberpage.o \
 		paging.o \
