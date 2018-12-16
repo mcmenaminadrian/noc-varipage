@@ -21,26 +21,12 @@ Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
 {
 	long totalLeaves = columns * rows;
 	levels = 0;
-	long busCount = totalLeaves / 2;
 
-	//create the nodes
-	while (busCount > 1) {
-		nodesTree.push_back(Bus(levels, &globalMemory));
-		levels++;
-		busCount = busCount/2;
-	}
-	//number the leaves
 	//root bus - connects to global memory
 	nodesTree.push_back(Bus(levels, &globalMemory));
 	nodesTree[levels].assignGlobalMemory(&globalMemory);
 	nodesTree[levels].upstreamBus = nullptr;
 	nodesTree[levels].initialiseMutex();
-	//initialise the mutexes
-	for (unsigned int i = 0; i < nodesTree.size() - 1; i++) {
-			nodesTree[i].initialiseMutex();
-			nodesTree[i].upstreamBus = 
-				& nodesTree[i + 1]; 
-	}
 
 	for (int i = 0; i < 128; i++)
 	{

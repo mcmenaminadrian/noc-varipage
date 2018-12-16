@@ -38,10 +38,7 @@ void Bus::disarmMutex()
 void Bus::initialiseMutex()
 {
 	gateMutex = new mutex();
-	//ugly hack follows
-	if (level == 6) {
-		acceptedMutex = new mutex();
-	}
+	acceptedMutex = new mutex();
 }
 
 void Bus::routePacket(MemoryPacket& memoryRequest)
@@ -52,30 +49,10 @@ void Bus::routePacket(MemoryPacket& memoryRequest)
 
 void Bus::fillNextBuffer(MemoryPacket& packet)
 {
-	if (level == 0) {
-		//backoff
-		int backOff = 0;
-		packet.getProcessor()->waitGlobalTick();
-		while (true) {
-			gateMutex->lock();
-			if (buffer == false) {
-				buffer = true;
-				gateMutex->unlock();
-				return;
-			}
-			gateMutex->unlock();
-			for (int i = 0; i < (1 << backOff); i++) {
-				packet.getProcessor()->waitGlobalTick();
-				packet.getProcessor()->incrementBlocks();
-			}
-			backOff = (backOff++) % 8;
-			packet.getProcessor()->waitGlobalTick();
-			packet.getProcessor()->incrementBlocks();
-		}
-	}
-		
+	//backoff
+	int backOff = 0;
+	packet.getProcessor()->waitGlobalTick();
 	while (true) {
-		packet.getProcessor()->waitGlobalTick();
 		gateMutex->lock();
 		if (buffer == false) {
 			buffer = true;
@@ -83,8 +60,15 @@ void Bus::fillNextBuffer(MemoryPacket& packet)
 			return;
 		}
 		gateMutex->unlock();
+		for (int i = 0; i < (1 << backOff); i++) {
+			packet.getProcessor()->waitGlobalTick();
+			packet.getProcessor()->incrementBlocks();
+		}
+		backOff = (backOff++) % 8;
+		packet.getProcessor()->waitGlobalTick();
 		packet.getProcessor()->incrementBlocks();
 	}
+		
 }
 
 void Bus::routeDown(MemoryPacket& packet)
@@ -133,27 +117,10 @@ void Bus::routeDown(MemoryPacket& packet)
 
 void Bus::keepRoutingPacket(MemoryPacket& packet)
 {
-	if (upstreamBus == nullptr) {
-		return routeDown(packet);	
-	} else {
-		return postPacketUp(packet);
-	}
+	return routeDown(packet);	
 }
 
 void Bus::postPacketUp(MemoryPacket& packet)
 {
-	while (true) {	
-		packet.getProcessor()->waitGlobalTick();
-		upstreamBus->gateMutex->lock();
-		if (upstreamBus->buffer == false) {
-			upstreamBus->buffer = true;
-			upstreamBus->gateMutex->unlock();
-			gateMutex->lock();
-			buffer = false;
-			gateMutex->unlock();
-			return upstreamBus->keepRoutingPacket(packet);
-		}
-		upstreamBus->gateMutex->unlock();
-		packet.getProcessor()->incrementBlocks();
-	}		
+	keepRoutingPacket(packet);
 }
