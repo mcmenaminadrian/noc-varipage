@@ -38,11 +38,12 @@ Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
 	//number the leaves
 	//root bus - connects to global memory
 	nodesTree.push_back(Bus(levels, &globalMemory));
-	nodesTree[levels].assignGlobalMemory(&globalMemory);
-	nodesTree[levels].upstreamBus = nullptr;
-	nodesTree[levels].initialiseMutex();
+	int topBus = nodesTree.size() - 1;
+	nodesTree[topBus].assignGlobalMemory(&globalMemory);
+	nodesTree[topBus].upstreamBus = nullptr;
+	nodesTree[topBus].initialiseMutex();
 	//initialise the mutexes
-	for (unsigned int i = 0; i < nodesTree.size() - 1; i++) {
+	for (unsigned int i = 0; i < topBus; i++) {
 		nodesTree[i].initialiseMutex();
 		if (i > 7) {
 			nodesTree[i].upstreamBus = & nodesTree[i + 1];
