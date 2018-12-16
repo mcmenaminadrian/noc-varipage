@@ -25,7 +25,7 @@ Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
  
 	//create the nodes - eight buses at the base
 	for (int i = 0; i < 8; i++){
-		nodesTree.push_back(Bus(levels, &globalMemory);
+		nodesTree.push_back(Bus(levels, &globalMemory));
 	}
 	levels++;
 	busCount = busCount / 2;
