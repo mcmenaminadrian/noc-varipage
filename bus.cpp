@@ -38,6 +38,10 @@ void Bus::disarmMutex()
 void Bus::initialiseMutex()
 {
 	gateMutex = new mutex();
+	//ugly hack follows
+	if (level == 6) {
+		acceptedMutex = new mutex();
+	}
 }
 
 void Bus::routePacket(MemoryPacket& memoryRequest)
@@ -51,8 +55,8 @@ void Bus::fillNextBuffer(MemoryPacket& packet)
 	if (level == 0) {
 		//backoff
 		int backOff = 0;
+		packet.getProcessor()->waitGlobalTick();
 		while (true) {
-			packet.getProcessor()->waitGlobalTick();
 			gateMutex->lock();
 			if (buffer == false) {
 				buffer = true;
@@ -65,6 +69,7 @@ void Bus::fillNextBuffer(MemoryPacket& packet)
 				packet.getProcessor()->incrementBlocks();
 			}
 			backOff = (backOff++) % 8;
+			packet.getProcessor()->waitGlobalTick();
 			packet.getProcessor()->incrementBlocks();
 		}
 	}
