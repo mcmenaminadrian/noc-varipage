@@ -142,6 +142,7 @@ void Bus::keepRoutingPacket(MemoryPacket& packet)
 
 void Bus::postPacketUp(MemoryPacket& packet)
 {
+	uint backOff = 0;
 	while (true) {	
 		packet.getProcessor()->waitGlobalTick();
 		upstreamBus->gateMutex->lock();
@@ -155,5 +156,12 @@ void Bus::postPacketUp(MemoryPacket& packet)
 		}
 		upstreamBus->gateMutex->unlock();
 		packet.getProcessor()->incrementBlocks();
+		if (level == 0) {
+			for (int i = 0; i < (1 << backOff); i++) {
+				packet.getProcessor()->waitGlobalTick();
+				packet.getProcessor()->incrementBlocks();
+			}
+			backOff = (backOff + 1) % 4;
+		}
 	}		
 }

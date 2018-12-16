@@ -22,8 +22,14 @@ Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
 	long totalLeaves = columns * rows;
 	levels = 0;
 	long busCount = totalLeaves / 2;
-
-	//create the nodes
+ 
+	//create the nodes - eight buses at the base
+	for (int i = 0; i < 8; i++){
+		nodesTree.push_back(Bus(levels, &globalMemory);
+	}
+	levels++;
+	busCount = busCount / 2;
+	//the rest of the buses
 	while (busCount > 1) {
 		nodesTree.push_back(Bus(levels, &globalMemory));
 		levels++;
@@ -37,14 +43,17 @@ Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
 	nodesTree[levels].initialiseMutex();
 	//initialise the mutexes
 	for (unsigned int i = 0; i < nodesTree.size() - 1; i++) {
-			nodesTree[i].initialiseMutex();
-			nodesTree[i].upstreamBus = 
-				& nodesTree[i + 1]; 
+		nodesTree[i].initialiseMutex();
+		if (i > 7) {
+			nodesTree[i].upstreamBus = & nodesTree[i + 1];
+		} else {
+			nodesTree[i].upstreamBus = & nodesTree[8];
+		} 
 	}
 
 	for (int i = 0; i < 128; i++)
 	{
-		noc.tileAt(i)->addTreeLeaf(&nodesTree[0]);
+		noc.tileAt(i)->addTreeLeaf(&nodesTree[i / 16]);
 	}
 
 	//attach root to global memory
