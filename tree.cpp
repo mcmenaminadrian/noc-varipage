@@ -54,7 +54,7 @@ Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
 
 	for (int i = 0; i < 128; i++)
 	{
-		noc.tileAt(i)->addTreeLeaf(&nodesTree[i / 16]);
+		noc.tileAt(i)->addTreeLeaf(&nodesTree[i % 8]);
 	}
 
 	//attach root to global memory
