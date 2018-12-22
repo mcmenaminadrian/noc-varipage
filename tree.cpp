@@ -28,13 +28,8 @@ Tree::Tree(Memory& globalMemory, Noc& noc, const long columns, const long rows)
 		nodesTree.push_back(Bus(levels, &globalMemory));
 	}
 	levels++;
-	busCount = busCount / 2;
-	//the rest of the buses
-	while (busCount > 1) {
-		nodesTree.push_back(Bus(levels, &globalMemory));
-		levels++;
-		busCount = busCount/2;
-	}
+	//one more bus
+	nodesTree.push_back(Bus(levels, &globalMemory));
 	//number the leaves
 	//root bus - connects to global memory
 	nodesTree.push_back(Bus(levels, &globalMemory));
