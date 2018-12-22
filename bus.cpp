@@ -39,7 +39,7 @@ void Bus::initialiseMutex()
 {
 	gateMutex = new mutex();
 	//ugly hack follows
-	if (level == 6) {
+	if (level == 1) {
 		acceptedMutex = new mutex();
 	}
 }
