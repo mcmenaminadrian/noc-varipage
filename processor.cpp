@@ -764,10 +764,11 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 					readLong(baseAddress + VOFFSET);
 				uint32_t oldFlags = masterTile->
 					readWord32(baseAddress + FLAGOFFSET);
-				if (!(oldFlags & 0x08)) {
-					dimSiliconWait();	
+				if (!(oldFlags & 0x05)) {
+					dimSiliconWait();
+					oldFlags = oldFlags ^ 0x08;	
 					masterTile->writeWord32(baseAddress +
-						FLAGOFFSET, oldFlags|0x08);
+						FLAGOFFSET, oldFlags|0x05);
 					dimSiliconWait();
 				}
 				for (uint64_t i = 0; i < BITMAPDELAY; i++) {
