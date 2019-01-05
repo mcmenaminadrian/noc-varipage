@@ -37,7 +37,7 @@
 
 const static uint64_t KERNELPAGES = 2;	//2 gives 1k kernel on 512b paging
 const static uint64_t STACKPAGES = 2; 	//2 gives 1k stack on 512b paging
-const static uint64_t BITMAPDELAY = 2;	//0 for subcycle bitmap checks
+const static uint64_t BITMAPDELAY = 0;	//0 for subcycle bitmap checks
 const static uint64_t FREEPAGES = 25;	//25 for 512b pages, 12 for 1k pages
 const static uint64_t BASEPAGES = 5;	//5 for 512b pages, 3 for 1k pages 
 
@@ -753,10 +753,11 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 					readLong(baseAddress + VOFFSET);
 				uint32_t oldFlags = masterTile->
 					readWord32(baseAddress + FLAGOFFSET);
-				if (!(oldFlags & 0x08)) {
-					waitATick();	
+				if (!(oldFlags & 0x05)) {
+					waitATick();
+					oldFlags = oldFlags^0x08;	
 					masterTile->writeWord32(baseAddress +
-						FLAGOFFSET, oldFlags|0x08);
+						FLAGOFFSET, oldFlags|0x05);
 					waitATick();
 				}
 				for (uint64_t i = 0; i < BITMAPDELAY; i++) {
