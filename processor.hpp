@@ -127,7 +127,7 @@ private:
     	const uint16_t clockTicks = 1000;
 	uint64_t totalTicks;
 	uint64_t currentTLB;
-
+	uint64_t BITMAPDELAY = 0;
 public:
 	std::bitset<16> statusWord;
     	Processor(Tile* parent, MainWindow *mW, uint64_t numb);

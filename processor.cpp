@@ -37,7 +37,6 @@
 
 const static uint64_t KERNELPAGES = 1;	//2 gives 1k kernel on 512b paging
 const static uint64_t STACKPAGES = 1; 	//2 gives 1k stack on 512b paging
-const static uint64_t BITMAPDELAY = 0;	//0 for subcycle bitmap checks
 const static uint64_t FREEPAGES = 12;	//25 for 512b pages, 12 for 1k pages
 const static uint64_t BASEPAGES = 3;	//5 for 512b pages, 3 for 1k pages 
 
@@ -61,6 +60,9 @@ Processor::Processor(Tile *parent, MainWindow *mW, uint64_t numb):
         	mW, SLOT(updateHardFaults()));
     	QObject::connect(this, SIGNAL(smallFault()),
         	mW, SLOT(updateSmallFaults()));
+	if (numb % 8 == 0 || numb % 6 == 0) {
+		BITMAPDELAY = 1;
+	}
 }
 
 void Processor::resetCounters()
