@@ -60,7 +60,8 @@ Processor::Processor(Tile *parent, MainWindow *mW, uint64_t numb):
         	mW, SLOT(updateHardFaults()));
     	QObject::connect(this, SIGNAL(smallFault()),
         	mW, SLOT(updateSmallFaults()));
-	if (numb % 8 == 0 || numb % 8 == 6) {
+	unsigned long order = parent->getOrder(); 
+	if (order % 8 == 0 || order % 8 == 6) {
 		BITMAPDELAY = 1;
 	}
 }
