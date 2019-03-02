@@ -306,14 +306,14 @@ const vector<uint8_t> Processor::requestRemoteMemory(
 
 void Processor::transferGlobalToLocal(const uint64_t& address,
 	const tuple<uint64_t, uint64_t, bool>& tlbEntry,
-	const uint64_t& size, const bool& write)
+	const uint64_t& size)
 {
 	//mimic a DMA call - so need to advance PC
 	uint64_t maskedAddress = address & BITMAP_MASK;
 	int offset = 0;
 	vector<uint8_t> answer = requestRemoteMemory(size,
 		maskedAddress, get<1>(tlbEntry) +
-		(maskedAddress & bitMask), write);
+		(maskedAddress & bitMask), false);
 	for (auto x: answer) {
 		masterTile->writeByte(get<1>(tlbEntry) + offset + 
 			(maskedAddress & bitMask), x);
@@ -339,7 +339,7 @@ uint64_t Processor::triggerSmallFault(
 	emit smallFault();
 	smallFaultCount++;
 	interruptBegin();
-	transferGlobalToLocal(address, tlbEntry, BITMAP_BYTES, write);
+	transferGlobalToLocal(address, tlbEntry, BITMAP_BYTES);
 	const uint64_t frameNo =
 		(get<1>(tlbEntry) - PAGESLOCAL) >> pageShift;
 	markBitmap(frameNo, address);
@@ -660,7 +660,7 @@ uint64_t Processor::triggerHardFault(const uint64_t& address,
 	pair<uint64_t, uint8_t> translatedAddress = mapToGlobalAddress(address);
 	fixTLB(frameData.first, translatedAddress.first);
 	transferGlobalToLocal(translatedAddress.first + (address & bitMask),
-		tlbs[frameData.first], BITMAP_BYTES, write);
+		tlbs[frameData.first], BITMAP_BYTES);
 	fixPageMap(frameData.first, translatedAddress.first, readOnly);
 	markBitmapStart(frameData.first, translatedAddress.first +
 		(address & bitMask));
