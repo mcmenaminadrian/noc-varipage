@@ -93,7 +93,7 @@ private:
 	void interruptBegin();
 	void interruptEnd();
 	void transferGlobalToLocal(const uint64_t& address,
-	const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
+		const std::tuple<uint64_t, uint64_t, bool>& tlbEntry,
     		const uint64_t& size);
     	uint64_t triggerHardFault(const uint64_t& address, const bool& readOnly,
         	const bool& write);
