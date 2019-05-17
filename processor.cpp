@@ -1003,10 +1003,10 @@ void Processor::activateClock()
 		if (!(flags & 0x01) || flags & 0x02) {
 			continue;
 		}
-		if (markedWrite && (flags & 0x08)) {
+		if (markedWrite && (!(flags & 0x08))) {
 			waitATick();
 			continue;
-		} else if (flags & 0x08) {
+		} else if (!(flags & 0x08)) {
 			markedWrite == true;
 			waitATick();
 		}
