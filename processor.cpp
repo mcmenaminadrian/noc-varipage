@@ -763,7 +763,7 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 					readLong(baseAddress + VOFFSET);
 				uint32_t oldFlags = masterTile->
 					readWord32(baseAddress + FLAGOFFSET);
-				if (!(oldFlags & 0x05)) {
+				if (oldFlags & 0x08) {
 					waitATick();
 					oldFlags = oldFlags^0x08;
 					masterTile->writeWord32(baseAddress +
@@ -800,6 +800,7 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			if (pageSought == storedPage) {
 				waitATick();
 				flags |= 0x04;
+				flags ^= 0x08;
 				masterTile->writeWord32(addressInPageTable +
 					FLAGOFFSET, flags);
 				waitATick();
@@ -987,6 +988,7 @@ void Processor::activateClock()
 	if (inInterrupt) {
 		return;
 	}
+	bool markedWrite = false;
 	inClock = true;
 	uint64_t pages = TILE_MEM_SIZE >> pageShift;
 	interruptBegin();
@@ -1000,6 +1002,13 @@ void Processor::activateClock()
 		waitATick();
 		if (!(flags & 0x01) || flags & 0x02) {
 			continue;
+		}
+		if (markedWrite && (flags & 0x08)) {
+			waitATick();
+			continue;
+		} else if (flags & 0x08) {
+			markedWrite == true;
+			waitATick();
 		}
 		flags = flags & (~0x04);
 		waitATick();
