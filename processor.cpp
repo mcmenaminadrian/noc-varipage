@@ -988,7 +988,6 @@ void Processor::activateClock()
 	if (inInterrupt) {
 		return;
 	}
-	bool markedWrite = false;
 	inClock = true;
 	uint64_t pages = TILE_MEM_SIZE >> pageShift;
 	interruptBegin();
@@ -1002,13 +1001,6 @@ void Processor::activateClock()
 		waitATick();
 		if (!(flags & 0x01) || flags & 0x02) {
 			continue;
-		}
-		if (markedWrite && (!(flags & 0x08))) {
-			waitATick();
-			continue;
-		} else if (!markedWrite && !(flags & 0x08)) {
-			markedWrite = true;
-			waitATick();
 		}
 		flags = flags & (~0x04);
 		waitATick();
