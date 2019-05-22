@@ -697,37 +697,8 @@ uint64_t Processor::fetchAddressRead(const uint64_t& address,
 			}
             		y++;
 		}
-		//not in TLB - but check if it is in page table
+		//not here - so hard fault
 		waitATick(); 
-		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
-			waitATick();
-            		uint64_t addressInPageTable = PAGESLOCAL +
-                        	(i * PAGETABLEENTRY) + 
-				(1 << pageShift) * KERNELPAGES;
-            		uint64_t flags =
-				masterTile->readWord32(addressInPageTable
-                        	+ FLAGOFFSET);
-            		if (!(flags & 0x01)) {
-                		continue;
-            		}
-            		waitATick();
-            		uint64_t storedPage = masterTile->readLong(
-                        	addressInPageTable + VOFFSET);
-            		waitATick();
-            		if (pageSought == storedPage) {
-                		waitATick();
-                		flags |= 0x04;
-                		masterTile->writeWord32(
-					addressInPageTable + FLAGOFFSET,
-                    			flags);
-                		waitATick();
-                		fixTLB(i, address);
-                		waitATick();
-                		return fetchAddressRead(address);
-            		}
-			waitATick();
-        	}
-        	waitATick();
         	return triggerHardFault(address, readOnly, write);
 	} else {
 		//what do we do if it's physical address?
@@ -771,35 +742,7 @@ uint64_t Processor::fetchAddressWrite(const uint64_t& address)
 			}
 			y++;
 		}
-		//not in TLB - but check if it is in page table
-		waitATick();
-		for (unsigned int i = 0; i < TOTAL_LOCAL_PAGES; i++) {
-			waitATick();
-			uint64_t addressInPageTable = PAGESLOCAL +
-				(i * PAGETABLEENTRY) +
-				(1 << pageShift) * KERNELPAGES;
-			uint32_t flags = masterTile->readWord32(addressInPageTable
-				+ FLAGOFFSET);
-			if (!(flags & 0x01)) {
-				continue;
-			}
-			waitATick();
-			uint64_t storedPage = masterTile->readLong(
-				addressInPageTable + VOFFSET);
-			waitATick();
-			if (pageSought == storedPage) {
-				waitATick();
-				flags |= 0x04;
-				flags ^= 0x08;
-				masterTile->writeWord32(addressInPageTable +
-					FLAGOFFSET, flags);
-				waitATick();
-				fixTLB(i, address);
-				waitATick();
-				return fetchAddressWrite(address);
-			}
-			waitATick();
-		}
+		//not here - so hard fault
 		waitATick();
 		return triggerHardFault(address, readOnly, true);
 	} else {
