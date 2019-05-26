@@ -62,8 +62,8 @@ void ControlThread::run()
 	unique_lock<mutex> lck(runLock);
 	unique_lock<mutex> lckBlock(blockLock);
 	if (blockedInTree > 0) {
-		cout << "On tick " << ticks << " total blocks ";
-		cout << blockedInTree << endl;
+		//cout << "On tick " << ticks << " total blocks ";
+		//cout << blockedInTree << endl;
 		blockedInTree = 0;
 	}
 	lckBlock.unlock();
