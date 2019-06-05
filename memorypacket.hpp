@@ -47,6 +47,7 @@ public:
     {write = true;}
     bool getWrite() const
     {return write;}
+	int waitCount;
 };
 
 #endif

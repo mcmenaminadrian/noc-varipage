@@ -181,10 +181,11 @@ public:
         void incrementServiceTime();
         void resetCounters();
 	void incrementBlockage();
-	void outputBlockage();
+	void outputBlockage(const int& blCount);
     	uint64_t hardFaultCount;
     	uint64_t smallFaultCount;
     	uint64_t blocks;
     	uint64_t serviceTime;
+	int waitAtTop;
 };
 #endif

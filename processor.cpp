@@ -1032,15 +1032,8 @@ void Processor::dumpPageFromTLB(const uint64_t& address)
 	}
 }
 
-void Processor::incrementBlockage()
-{
-
-	ControlThread *pBarrier = masterTile->getBarrier();
-	pBarrier->incrementBlockage();
-}
-
-void Processor::outputBlockage()
+void Processor::outputBlockage(const int& mBlocks)
 {
 	ControlThread *pBarrier = masterTile->getBarrier();
-	pBarrier->outputBlocks();
+	pBarrier->outputBlocks(mBlocks, processorNumber);
 }

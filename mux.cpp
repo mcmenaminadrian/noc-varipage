@@ -87,6 +87,7 @@ void Mux::routeDown(MemoryPacket& packet)
 {
 	// - this is the alternating implementation
 	// are we left or right?
+	packet.waitCount = 0;
 	bool packetOnLeft = false;
 	bool *bufferToUnblock = nullptr;
 	const uint64_t processorIndex = packet.getProcessor()->
@@ -156,6 +157,7 @@ void Mux::routeDown(MemoryPacket& packet)
 		bottomLeftMutex->unlock();
                 }
                 acceptedMutex->unlock();
+		packet.waitCount++;
 		packet.getProcessor()->incrementBlocks();
 	}
 
@@ -167,6 +169,7 @@ fillDDR:
         bottomLeftMutex->unlock();
 	acceptedPackets++;
         acceptedMutex->unlock();
+	packet.getProcessor()->outputBlockage(packet.waitCount);
     uint64_t serviceDelay = MMU_DELAY;
     if (packet.getWrite()) {
         serviceDelay *= WRITE_FACTOR;
@@ -195,7 +198,6 @@ fillDDR:
 void Mux::keepRoutingPacket(MemoryPacket& packet)
 {
 	if (upstreamMux == nullptr) {
-		packet.getProcessor()->outputBlockage();
 		return routeDown(packet);
 	} else {
 		return postPacketUp(packet);
@@ -356,9 +358,6 @@ void Mux::postPacketUp(MemoryPacket& packet)
 		}
 		bottomRightMutex->unlock();
 		bottomLeftMutex->unlock();
-		if (upstreamMux->upstreamMux == nullptr) {
-			packet.getProcessor()->incrementBlockage();
-		}
 		packet.getProcessor()->incrementBlocks();
 	}
 }
