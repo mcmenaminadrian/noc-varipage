@@ -14,6 +14,7 @@ ControlThread::ControlThread(unsigned long tcks, MainWindow *pWind):
     QObject::connect(this, SIGNAL(updateCycles()),
         pWind, SLOT(updateLCD()));
     blockedInTree = 0;
+	waitBlocks = 0;
 }
 
 void ControlThread::releaseToRun()
@@ -57,13 +58,25 @@ void ControlThread::incrementBlocks()
 	lckBlock.unlock();
 }
 
+void ControlThread::incrementBlockage()
+{
+	waitBlocks++;
+}
+
+void ControlThread::outputBlocks()
+{
+	cout << "On tick " << ticks << " total blocks ";
+	cout << waitBlocks << endl;
+	waitBlocks = 0;
+}
+
 void ControlThread::run()
 {
 	unique_lock<mutex> lck(runLock);
 	unique_lock<mutex> lckBlock(blockLock);
 	if (blockedInTree > 0) {
-		cout << "On tick " << ticks << " total blocks ";
-		cout << blockedInTree << endl;
+//		cout << "On tick " << ticks << " total blocks ";
+//		cout << blockedInTree << endl;
 		blockedInTree = 0;
 	}
 	lckBlock.unlock();

@@ -195,6 +195,7 @@ fillDDR:
 void Mux::keepRoutingPacket(MemoryPacket& packet)
 {
 	if (upstreamMux == nullptr) {
+		packet.getProcessor()->outputBlockage();
 		return routeDown(packet);
 	} else {
 		return postPacketUp(packet);
@@ -355,6 +356,9 @@ void Mux::postPacketUp(MemoryPacket& packet)
 		}
 		bottomRightMutex->unlock();
 		bottomLeftMutex->unlock();
+		if (upstreamMux->upstreamMux == nullptr) {
+			packet.getProcessor()->incrementBlockage();
+		}
 		packet.getProcessor()->incrementBlocks();
 	}
 }

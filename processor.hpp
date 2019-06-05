@@ -180,6 +180,8 @@ public:
 	void incrementBlocks();
         void incrementServiceTime();
         void resetCounters();
+	void incrementBlockage();
+	void outputBlockage();
     	uint64_t hardFaultCount;
     	uint64_t smallFaultCount;
     	uint64_t blocks;

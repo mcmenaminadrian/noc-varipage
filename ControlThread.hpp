@@ -29,6 +29,7 @@ private:
 	std::mutex cheatLock;
 	MainWindow *mainWindow;
 	void run();
+	int waitBlocks;
 
 public:
 	ControlThread(unsigned long count = 0, MainWindow *pWind = nullptr);
@@ -40,6 +41,8 @@ public:
 	void waitForBegin();
 	bool tryCheatLock();
 	void unlockCheatLock();
+	void incrementBlockage();
+	void outputBlocks();
 };
 
 #endif
