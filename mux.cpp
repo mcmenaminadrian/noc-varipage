@@ -169,11 +169,13 @@ fillDDR:
         bottomLeftMutex->unlock();
 	acceptedPackets++;
         acceptedMutex->unlock();
-	packet.getProcessor()->outputBlockage(packet.waitCount);
+//	packet.getProcessor()->outputBlockage(packet.waitCount);
     uint64_t serviceDelay = MMU_DELAY;
     if (packet.getWrite()) {
         serviceDelay *= WRITE_FACTOR;
-    }
+	cout << "W" << endl;
+    } else
+	    cout << "R" << endl;
     for (unsigned int i = 0; i < serviceDelay; i++) {
         packet.getProcessor()->incrementServiceTime();
         packet.getProcessor()->waitGlobalTick();
