@@ -73,6 +73,7 @@ void XMLFunctor::operator()()
            XMLString::release(&message);
            exit(1);
     }
+	/*
     	cout << "===========" << endl;
     	cout << "On pass " << pass << endl;
     	cout << "Task on " << order << " completed." << endl;
@@ -82,6 +83,7 @@ void XMLFunctor::operator()()
     	cout << "Service time: " << proc->serviceTime << endl;
     	cout << "Ticks: " << proc->getTicks() << endl;
     	cout << "===========" << endl;
+	*/
     	proc->resetCounters();
     	pass++;
     	delete lackeyHandler;
