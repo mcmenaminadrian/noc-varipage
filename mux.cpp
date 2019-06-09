@@ -173,9 +173,10 @@ fillDDR:
     uint64_t serviceDelay = MMU_DELAY;
     if (packet.getWrite()) {
         serviceDelay *= WRITE_FACTOR;
-	cout << "W" << std::flush;
+	cout << "W: ";
     } else
-	    cout << "R";
+	    cout << "R: ";
+    packet.getProcessor()->outputBlockage(packet.waitCount);
     for (unsigned int i = 0; i < serviceDelay; i++) {
         packet.getProcessor()->incrementServiceTime();
         packet.getProcessor()->waitGlobalTick();
