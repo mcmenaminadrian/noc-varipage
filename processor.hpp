@@ -76,17 +76,13 @@ private:
 	bool inInterrupt;
 	bool inClock;
 	bool clockDue;
-	void markUpBasicPageEntries(const uint64_t& reqPTEPages,
-		const uint64_t& reqBitmapPages);
+	void markUpBasicPageEntries(const uint64_t& reqPTEPage);
 	void writeOutBasicPageEntries(const uint64_t& reqPTEPages);
-	void writeOutPageAndBitmapLengths(const uint64_t& reqPTESize,
-		const uint64_t& reqBitmapPages);
+	void writeOutPageAndBitmapLengths(const uint64_t& reqPTESize);
 	void zeroOutTLBs(const uint64_t& reqPTEPages);
 	uint64_t fetchAddressRead(const uint64_t& address,
 		const bool& readOnly = true, const bool& write = false);
     	uint64_t fetchAddressWrite(const uint64_t& address);
-	bool isBitmapValid(const uint64_t& address,
-		const uint64_t& physAddress) const;
 	uint64_t generateAddress(const uint64_t& frame,
 		const uint64_t& address);
     	uint64_t triggerSmallFault(
@@ -105,13 +101,6 @@ private:
         const uint64_t& address, const bool& readOnly);
 	void fixPageMapStart(const uint64_t& frameNo,
 		const uint64_t& address);
-	void fixBitmap(const uint64_t& frameNo);
-	void markBitmapStart(const uint64_t& frameNo,
-		const uint64_t& address);
-	void markBitmapInit(const uint64_t& frameNo,
-        	const uint64_t& address);
-	void markBitmap(const uint64_t& frameNo,
-        	const uint64_t& address);
 	void fixTLB(const uint64_t& frameNo,
 		const uint64_t& address);
 	const std::vector<uint8_t>
