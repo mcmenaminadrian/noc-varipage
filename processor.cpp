@@ -106,8 +106,7 @@ void Processor::zeroOutTLBs(const uint64_t& frames)
 	}
 }
 
-void Processor::writeOutPageAndBitmapLengths(const uint64_t& reqPTEPages,
-	const uint64_t& reqBitmapPages)
+void Processor::writeOutPageAndBitmapLengths(const uint64_t& reqPTEPages)
 {
 	masterTile->writeLong(PAGESLOCAL, reqPTEPages);
 }
@@ -130,8 +129,7 @@ void Processor::writeOutBasicPageEntries(const uint64_t& pagesAvailable)
 	}
 }
 
-void Processor::markUpBasicPageEntries(const uint64_t& reqPTEPages,
-	const uint64_t& reqBitmapPages)
+void Processor::markUpBasicPageEntries(const uint64_t& reqPTEPages)
 {
 	//mark for page tables and 2 notional page for kernel
 	for (unsigned int i = 0;
@@ -377,8 +375,6 @@ void Processor::writeBackMemory(const uint64_t& frameNo)
 					physicalAddress + i 
 					+ j * sizeof(uint64_t)), toGo);
 			}
-		}
-		bitToRead++;
 	}
 }
 
